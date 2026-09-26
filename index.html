@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ミニゲーム集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{--bg:#14121c;--card:#1f1c2b;--line:#343048;--ink:#f4f0ff;--dim:#a49dbb;color-scheme:dark}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+    padding:calc(env(safe-area-inset-top,0px) + 40px) 16px calc(env(safe-area-inset-bottom,0px) + 40px)}
+  main{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+  h1{margin:0;font-family:"Dela Gothic One",system-ui,sans-serif;font-weight:400;font-size:clamp(36px,11vw,52px);line-height:1.05}
+  .lead{margin:0;color:var(--dim);line-height:1.7}
+  ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+  a.g{display:grid;grid-template-columns:64px 1fr;gap:16px;align-items:center;padding:14px;border-radius:18px;background:var(--card);border:1px solid var(--line);color:inherit;text-decoration:none;transition:transform .1s}
+  a.g:active{transform:scale(.98)}
+  a.g:focus-visible{outline:2px solid #ffe27a;outline-offset:3px}
+  .ic{width:64px;height:64px;border-radius:16px;display:grid;place-items:center;font-family:"Dela Gothic One",system-ui,sans-serif;font-size:26px;color:#14121c}
+  .t{font-weight:700;font-size:18px}
+  .d{color:var(--dim);font-size:13.5px;line-height:1.55;margin-top:2px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--dim);border:1px solid var(--line);border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:2px}
+</style>
+</head>
+<body>
+<main>
+  <h1>ミニゲーム集</h1>
+  <p class="lead">スマホのブラウザでそのまま遊べる3本。ホーム画面に追加するとアプリのように開けます。</p>
+  <ul>
+    <li><a class="g" href="stack/"><span class="ic" style="background:linear-gradient(135deg,#ff9ad5,#ffd36b)">積</span>
+      <span><span class="t">ピタ積み<span class="tag">ワンタップ</span></span><span class="d" style="display:block">動くブロックを止めて積み上げる。ピッタリ連鎖で幅が戻る。</span></span></a></li>
+    <li><a class="g" href="rush/"><span class="ic" style="background:linear-gradient(135deg,#6fa0ff,#8fd3ff)">群</span>
+      <span><span class="t">ナカマラッシュ<span class="tag">スライド</span></span><span class="d" style="display:block">ゲートで仲間を増やし、箱を撃ってパワーアップ。ボスを倒せ。</span></span></a></li>
+    <li><a class="g" href="toride/"><span class="ic" style="background:linear-gradient(135deg,#7ee07a,#ffcc33)">砦</span>
+      <span><span class="t">五列の砦<span class="tag">戦略</span></span><span class="d" style="display:block">召喚・合成・配置で守り抜く。ウェーブ毎に強化を選ぶローグライト。</span></span></a></li>
+  </ul>
+</main>
+</body>
+</html>

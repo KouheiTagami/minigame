@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#101c24">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>ピタ積み</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #fdf6ff;
+    --ink-dim: rgba(253, 246, 255, 0.62);
+    --ground: #1a1030;
+    --glow: #ffe27a;
+    --display: "Dela Gothic One", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+    --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage { position: relative; width: 100%; height: 100%; touch-action: none; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .hud {
+    position: absolute; left: 0; right: 0; top: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 28px);
+    pointer-events: none;
+  }
+  #score {
+    font-family: var(--display);
+    font-size: clamp(64px, 20vw, 110px);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 4px 0 rgba(0,0,0,0.18);
+    transition: transform 0.12s ease-out;
+  }
+  #score.bump { transform: scale(1.14); }
+  #best {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.14em;
+    color: var(--ink-dim);
+  }
+  #combo {
+    position: absolute; left: 0; right: 0; top: 36%;
+    text-align: center; pointer-events: none;
+    font-family: var(--display); font-size: 30px; letter-spacing: 0.04em;
+    color: var(--glow);
+    text-shadow: 0 0 18px rgba(255, 226, 122, 0.7);
+    opacity: 0; transform: translateY(8px) scale(0.9);
+  }
+  #combo.show { animation: pop 0.75s ease-out forwards; }
+  @keyframes pop {
+    0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+    18% { opacity: 1; transform: translateY(0) scale(1.08); }
+    60% { opacity: 1; transform: translateY(-6px) scale(1); }
+    100% { opacity: 0; transform: translateY(-22px) scale(1); }
+  }
+
+  .panel {
+    position: absolute; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12%);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    text-align: center; pointer-events: none;
+  }
+  .panel h1 {
+    margin: 0; font-family: var(--display); font-weight: 400;
+    font-size: clamp(44px, 14vw, 72px); line-height: 1; letter-spacing: 0.02em;
+    text-wrap: balance;
+  }
+  .panel p { margin: 0; font-size: 15px; font-weight: 500; color: var(--ink-dim); max-width: 30ch; line-height: 1.6; }
+  .panel .tap {
+    margin-top: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.2em;
+    animation: blink 1.4s ease-in-out infinite;
+  }
+  .panel .result { font-family: var(--display); font-size: 22px; }
+  .panel .newbest { color: var(--glow); font-family: var(--display); font-size: 20px; letter-spacing: 0.06em; }
+  @keyframes blink { 50% { opacity: 0.35; } }
+
+  #sound {
+    position: absolute; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1.5px solid rgba(253,246,255,0.35); background: rgba(0,0,0,0.18);
+    color: var(--ink); font: 700 12px var(--body); letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+  #sound:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel .tap { animation: none; }
+    #score { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div id="score">0</div>
+    <div id="best">BEST 0</div>
+  </div>
+  <div id="combo"></div>
+
+  <div class="panel" id="title">
+    <h1>ピタ積み</h1>
+    <p>動くブロックをタップで止めて積み上げる。はみ出た分は切り落とされる。ピッタリ重ねると連鎖ボーナスで幅が戻る。</p>
+    <div class="tap">TAP TO START</div>
+  </div>
+
+  <div class="panel" id="over" hidden>
+    <div class="result" id="overScore">12 段</div>
+    <div class="newbest" id="newBest" hidden>NEW BEST!</div>
+    <p id="overNote">あと少し。</p>
+    <div class="tap">TAP TO RETRY</div>
+  </div>
+
+  <button id="sound" type="button" aria-label="サウンド切替">ON</button>
+</div>
+
+<script>
+(() => {
+  const cvs = document.getElementById('c');
+  const g = cvs.getContext('2d');
+  const $ = id => document.getElementById(id);
+  const scoreEl = $('score'), bestEl = $('best'), comboEl = $('combo');
+  const titleEl = $('title'), overEl = $('over');
+
+  // ---- world constants (units) ----
+  const BASE = 10;          // block width/depth
+  const H = 2;              // layer height
+  const RANGE = 14;         // travel distance of the moving block
+  const PERFECT = 0.4;      // tolerance for a perfect drop
+  const GROW = 0.6;         // width regained per perfect once combo >= 3
+  const C30 = Math.cos(Math.PI / 6);
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+  };
+
+  let W = 0, Ht = 0, dpr = 1, unit = 10;
+  let layers, cur, debris, rings, state, combo, score, best, hue0;
+  let camY = 0, camTarget = 0, zoom = 1, zoomTarget = 1, bgHue = 0;
+  let soundOn = store.get('pita.sound', '1') === '1';
+  best = +store.get('pita.best', '0') || 0;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = cvs.clientWidth; Ht = cvs.clientHeight;
+    cvs.width = W * dpr; cvs.height = Ht * dpr;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    unit = Math.min(W, Ht * 0.62) / 30;
+  }
+  window.addEventListener('resize', resize);
+
+  // ---- audio ----
+  let ac = null;
+  const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+  function audio() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { ac = null; } }
+    if (ac && ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function tone(freq, dur = 0.14, type = 'triangle', vol = 0.18, slide = 0) {
+    if (!soundOn) return;
+    const a = audio(); if (!a) return;
+    const t = a.currentTime;
+    const o = a.createOscillator(), v = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq * slide), t + dur);
+    v.gain.setValueAtTime(0.0001, t);
+    v.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    v.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(v).connect(a.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+  function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch {} }
+
+  // ---- game ----
+  function reset() {
+    hue0 = Math.floor(Math.random() * 360);
+    layers = [{ x0: -BASE / 2, x1: BASE / 2, z0: -BASE / 2, z1: BASE / 2, hue: hue0 }];
+    debris = []; rings = [];
+    combo = 0; score = 0;
+    camTarget = H; zoomTarget = 1;
+    scoreEl.textContent = '0';
+    spawn();
+  }
+
+  function top() { return layers[layers.length - 1]; }
+
+  function spawn() {
+    const p = top();
+    const axis = layers.length % 2 ? 'x' : 'z';
+    cur = { x0: p.x0, x1: p.x1, z0: p.z0, z1: p.z1, axis, off: -RANGE, dir: 1,
+            hue: hue0 + layers.length * 5 };
+  }
+
+  function speed() { return Math.min(10 + score * 0.28, 24); }
+
+  function place() {
+    const p = top();
+    const a = cur.axis, k0 = a + '0', k1 = a + '1';
+    const d = cur.off;
+    const size = p[k1] - p[k0];
+    const y = layers.length * H;
+
+    if (Math.abs(d) >= size) {        // complete miss
+      debris.push(mk(cur, a, d, y, cur.hue));
+      return gameOver();
+    }
+
+    const n = { x0: p.x0, x1: p.x1, z0: p.z0, z1: p.z1, hue: cur.hue };
+    if (Math.abs(d) < PERFECT) {
+      combo++;
+      if (combo >= 3) {
+        const room = (BASE - size) / 2;
+        const gr = Math.min(GROW / 2, room);
+        n[k0] -= gr; n[k1] += gr;
+      }
+      rings.push({ x0: n.x0, x1: n.x1, z0: n.z0, z1: n.z1, y: y + H, t: 0 });
+      tone(midi(72 + SCALE[Math.min(combo - 1, SCALE.length - 1)]), 0.22, 'triangle', 0.2);
+      if (combo >= 3) tone(midi(84 + SCALE[Math.min(combo - 1, SCALE.length - 1)]), 0.3, 'sine', 0.08);
+      buzz(combo >= 3 ? [12, 30, 12] : 12);
+      showCombo(combo);
+    } else {
+      combo = 0;
+      const cut = { x0: p.x0, x1: p.x1, z0: p.z0, z1: p.z1 };
+      if (d > 0) { n[k0] = p[k0] + d; cut[k0] = p[k1]; cut[k1] = p[k1] + d; }
+      else       { n[k1] = p[k1] + d; cut[k0] = p[k0] + d; cut[k1] = p[k0]; }
+      debris.push({ ...cut, y, vy: 0, hue: cur.hue, push: Math.sign(d) * 3, axis: a });
+      tone(midi(55 + (score % 5)), 0.09, 'square', 0.06, 0.6);
+      buzz(8);
+    }
+    layers.push(n);
+    score++;
+    scoreEl.textContent = score;
+    scoreEl.classList.add('bump');
+    setTimeout(() => scoreEl.classList.remove('bump'), 110);
+    camTarget = (layers.length) * H;
+    spawn();
+  }
+
+  function mk(b, a, d, y, hue) {
+    const o = { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1, y, vy: 0, hue, push: 0, axis: a };
+    o[a + '0'] += d; o[a + '1'] += d;
+    return o;
+  }
+
+  function showCombo(n) {
+    comboEl.textContent = n >= 2 ? `PERFECT ×${n}` : 'PERFECT';
+    comboEl.classList.remove('show'); void comboEl.offsetWidth; comboEl.classList.add('show');
+  }
+
+  const notes = [
+    [0, 'まずは 5 段を目指そう。'],
+    [5, 'いい感じ。ピッタリ連鎖で幅を取り戻せる。'],
+    [15, 'その調子。リズムをつかんできた。'],
+    [30, 'かなりの腕前。30 段超え。'],
+    [50, '職人の域。'],
+    [80, '伝説の塔。']
+  ];
+
+  function gameOver() {
+    state = 'over';
+    cur = null;
+    tone(midi(60), 0.18, 'sawtooth', 0.08, 0.5);
+    setTimeout(() => tone(midi(53), 0.35, 'sawtooth', 0.07, 0.5), 140);
+    buzz([30, 40, 60]);
+    const isBest = score > best;
+    if (isBest) { best = score; store.set('pita.best', String(best)); }
+    bestEl.textContent = `BEST ${best}`;
+    $('overScore').textContent = `${score} 段`;
+    $('newBest').hidden = !(isBest && score > 0);
+    $('overNote').textContent = notes.filter(n => score >= n[0]).pop()[1];
+    // pull back to show the whole tower
+    const towerH = layers.length * H + 8;
+    zoomTarget = Math.min(1, (Ht * 0.5) / (towerH * unit));
+    camTarget = layers.length * H * 0.55;
+    overLock = performance.now() + 600;
+    setTimeout(() => { if (state === 'over') overEl.hidden = false; }, 450);
+  }
+
+  let overLock = 0;
+  function press() {
+    audio();
+    if (state === 'title') { state = 'play'; titleEl.hidden = true; tone(midi(72), 0.1); return; }
+    if (state === 'play' && cur) { place(); return; }
+    if (state === 'over' && performance.now() > overLock) {
+      overEl.hidden = true; reset(); state = 'play'; tone(midi(72), 0.1);
+    }
+  }
+
+  const stage = $('stage');
+  stage.addEventListener('pointerdown', e => {
+    if (e.target.id === 'sound') return;
+    e.preventDefault(); press();
+  });
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'Enter') { if (document.activeElement?.id === 'sound') return; e.preventDefault(); press(); }
+  });
+  const soundBtn = $('sound');
+  function paintSound() { soundBtn.textContent = soundOn ? 'ON' : 'OFF'; soundBtn.setAttribute('aria-pressed', soundOn); }
+  soundBtn.addEventListener('click', () => { soundOn = !soundOn; store.set('pita.sound', soundOn ? '1' : '0'); paintSound(); if (soundOn) tone(midi(76), 0.1); });
+  paintSound();
+
+  // ---- render ----
+  function P(x, y, z) {
+    const s = unit * zoom;
+    return [W / 2 + (x - z) * C30 * s, Ht * 0.56 + (x + z) * 0.5 * s - (y - camY) * s];
+  }
+  function poly(pts, fill) {
+    g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    g.closePath(); g.fillStyle = fill; g.fill();
+  }
+  function box(b, y0, y1, hue, alpha = 1) {
+    const h = ((hue % 360) + 360) % 360;
+    g.globalAlpha = alpha;
+    poly([P(b.x1, y1, b.z0), P(b.x1, y1, b.z1), P(b.x1, y0, b.z1), P(b.x1, y0, b.z0)], `hsl(${h} 58% 44%)`);
+    poly([P(b.x0, y1, b.z1), P(b.x1, y1, b.z1), P(b.x1, y0, b.z1), P(b.x0, y0, b.z1)], `hsl(${h} 62% 56%)`);
+    poly([P(b.x0, y1, b.z0), P(b.x1, y1, b.z0), P(b.x1, y1, b.z1), P(b.x0, y1, b.z1)], `hsl(${h} 70% 72%)`);
+    g.globalAlpha = 1;
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05); last = now;
+
+    if (state === 'play' && cur) {
+      cur.off += cur.dir * speed() * dt;
+      if (cur.off > RANGE) { cur.off = RANGE; cur.dir = -1; }
+      if (cur.off < -RANGE) { cur.off = -RANGE; cur.dir = 1; }
+    }
+    camY += (camTarget - camY) * Math.min(1, dt * 5);
+    zoom += (zoomTarget - zoom) * Math.min(1, dt * 3);
+    const hueNow = hue0 + layers.length * 5;
+    bgHue += ((hueNow + 200) - bgHue) * Math.min(1, dt * 2);
+
+    // background
+    const grd = g.createLinearGradient(0, 0, 0, Ht);
+    grd.addColorStop(0, `hsl(${bgHue % 360} 45% 30%)`);
+    grd.addColorStop(1, `hsl(${(bgHue + 40) % 360} 50% 12%)`);
+    g.fillStyle = grd; g.fillRect(0, 0, W, Ht);
+
+    // pedestal
+    const b0 = layers[0];
+    box(b0, -40, 0, hue0 - 10);
+
+    // stack (only what could be on screen)
+    const startI = Math.max(0, zoom < 0.99 ? 0 : layers.length - 40);
+    for (let i = startI; i < layers.length; i++) box(layers[i], i * H, (i + 1) * H, layers[i].hue);
+
+    // moving block
+    if (cur) {
+      const y = layers.length * H;
+      const b = { x0: cur.x0, x1: cur.x1, z0: cur.z0, z1: cur.z1 };
+      b[cur.axis + '0'] += cur.off; b[cur.axis + '1'] += cur.off;
+      box(b, y, y + H, cur.hue);
+    }
+
+    // perfect rings
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const r = rings[i]; r.t += dt;
+      const k = r.t / 0.5; if (k >= 1) { rings.splice(i, 1); continue; }
+      const e = 0.3 + k * 2.2;
+      const pts = [P(r.x0 - e, r.y, r.z0 - e), P(r.x1 + e, r.y, r.z0 - e), P(r.x1 + e, r.y, r.z1 + e), P(r.x0 - e, r.y, r.z1 + e)];
+      g.beginPath(); g.moveTo(...pts[0]); pts.slice(1).forEach(p => g.lineTo(...p)); g.closePath();
+      g.strokeStyle = `rgba(255,255,255,${(1 - k) * 0.9})`; g.lineWidth = 2.5; g.stroke();
+    }
+
+    // debris
+    for (let i = debris.length - 1; i >= 0; i--) {
+      const d = debris[i];
+      d.vy -= 60 * dt; d.y += d.vy * dt;
+      if (d.push) { const m = d.push * dt; d[d.axis + '0'] += m; d[d.axis + '1'] += m; }
+      if (d.y < camY - 60) { debris.splice(i, 1); continue; }
+      box(d, d.y, d.y + H, d.hue, 0.95);
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  function start() {
+    resize();
+    reset();
+    state = 'title';
+    bestEl.textContent = `BEST ${best}`;
+    camY = camTarget; bgHue = hue0 + 200;
+    requestAnimationFrame(t => { last = t; frame(t); });
+  }
+  start();
+})();
+</script>
+
+<a href="../" style="position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:20;font:700 12px system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.35);padding:8px 12px;border-radius:99px;text-decoration:none">← 一覧</a>
+</body>
+</html>

@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#101c24">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>五列の砦</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #101c24;
+    --panel: #1b2d38;
+    --panel2: #243b48;
+    --line: #35525f;
+    --ink: #eef6ee;
+    --dim: #93aab2;
+    --gold: #ffcc33;
+    --red: #ff5a6e;
+    --green: #7ee07a;
+    --pix: "DotGothic16", "MS Gothic", monospace;
+    --body: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body);
+    overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  #stage { position: relative; width: 100%; height: 100%; touch-action: none; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .hud {
+    position: absolute; left: 0; right: 0; top: 0; z-index: 2;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 8px;
+    display: flex; flex-direction: column; gap: 6px; pointer-events: none;
+  }
+  .stats { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .stat { font-family: var(--pix); font-size: 20px; display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+  .stat small { font-family: var(--body); font-size: 11px; font-weight: 700; color: var(--dim); letter-spacing: 0.08em; }
+  #wall { color: var(--red); }
+  #coins { color: var(--gold); }
+  .preview { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; min-height: 22px; }
+  .pv {
+    display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 99px; padding: 2px 8px 2px 4px;
+  }
+  .pv i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+  .controls {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+    padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  #info {
+    min-height: 36px; font-size: 12.5px; line-height: 1.45; color: var(--dim); text-align: center;
+    display: flex; align-items: center; justify-content: center; padding-inline: 4px;
+  }
+  #info b { color: var(--ink); }
+  .btns { display: grid; grid-template-columns: 1fr 1.3fr 52px; gap: 8px; }
+  button {
+    font-family: var(--body); font-weight: 900; color: var(--ink); cursor: pointer;
+    border: 2px solid var(--line); background: var(--panel2); border-radius: 14px; padding: 10px 6px;
+    box-shadow: 0 4px 0 #0a1319; transition: transform 0.06s;
+  }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #0a1319; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  #summon { display: flex; flex-direction: column; align-items: center; line-height: 1.2; font-size: 15px; }
+  #summon span { font-family: var(--pix); font-size: 13px; color: var(--gold); font-weight: 400; }
+  #go { background: #2e7d4f; border-color: #4bb877; font-size: 16px; }
+  #go.running { background: var(--panel2); border-color: var(--line); color: var(--dim); }
+  #speed { font-family: var(--pix); font-size: 16px; font-weight: 400; }
+
+  #sell {
+    position: absolute; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); z-index: 3;
+    height: 64px; border-radius: 14px; border: 2px dashed var(--red); background: rgba(255,90,110,0.14);
+    display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--red); pointer-events: none;
+  }
+  #sell.hot { background: rgba(255,90,110,0.35); color: var(--ink); }
+
+  .modal {
+    position: absolute; inset: 0; z-index: 10; background: rgba(8,14,18,0.82);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    padding-inline: 16px; text-align: center;
+  }
+  .modal h1, .modal h2 { margin: 0; font-family: var(--pix); font-weight: 400; line-height: 1.1; text-wrap: balance; }
+  .modal h1 { font-size: clamp(44px, 13vw, 64px); color: var(--gold); letter-spacing: 0.04em; }
+  .modal h2 { font-size: 28px; }
+  .modal p { margin: 0; color: var(--dim); font-size: 14px; line-height: 1.7; max-width: 34ch; }
+  .legend { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 360px; }
+  .lg { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 2px; font-size: 10.5px; line-height: 1.4; color: var(--dim); }
+  .lg b { display: block; margin: 0 auto 4px; width: 30px; height: 30px; line-height: 30px; border-radius: 8px; color: #10202a; font-size: 16px; }
+  .rules { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; max-width: 360px; font-size: 13px; line-height: 1.75; }
+  .rules b { color: var(--gold); }
+  .big { font-size: 18px; padding: 12px 34px; background: #2e7d4f; border-color: #4bb877; }
+  .cards { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 360px; }
+  .card {
+    text-align: left; display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center;
+    padding: 12px 14px; border-radius: 16px; font-weight: 700;
+  }
+  .card .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-family: var(--pix); font-size: 22px; color: #10202a; }
+  .card .t { font-size: 16px; font-weight: 900; }
+  .card .d { font-size: 12.5px; color: var(--dim); font-weight: 500; margin-top: 2px; }
+  .card .stack { color: var(--gold); font-size: 11px; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+
+  <div class="hud" id="hud">
+    <div class="stats">
+      <div class="stat"><small>WAVE</small><span id="wave">1</span></div>
+      <div class="stat" id="wall"><small>城壁</small><span id="wallN">20</span></div>
+      <div class="stat" id="coins"><small>コイン</small><span id="coinN">40</span></div>
+    </div>
+    <div class="preview" id="preview"></div>
+  </div>
+
+  <div class="controls" id="controls">
+    <div id="info">召喚でユニットを出し、同じ種類・同じLvを重ねて合成。</div>
+    <div class="btns">
+      <button id="summon" type="button">召喚<span id="cost">10</span></button>
+      <button id="go" type="button">WAVE 1 開始</button>
+      <button id="speed" type="button" aria-label="速度切替">×1</button>
+    </div>
+  </div>
+  <div id="sell" hidden>ここに離すと売却</div>
+
+  <div class="modal" id="mTitle">
+    <h1>五列の砦</h1>
+    <div class="legend" id="legend"></div>
+    <div class="rules">
+      ・<b>召喚</b>でランダムなユニットが盤面に出る<br>
+      ・同じ種類・同じLvをドラッグで重ねると<b>合成してLvアップ</b><br>
+      ・前の列ほど敵に届きやすい。配置が勝負<br>
+      ・ウェーブを越えるたびに<b>強化を1つ選ぶ</b><br>
+      ・5ウェーブごとにボス。城壁が0で終了
+    </div>
+    <button class="big" id="startBtn" type="button">出陣する</button>
+  </div>
+
+  <div class="modal" id="mPerk" hidden>
+    <h2 id="perkTitle">WAVE 1 突破！</h2>
+    <p id="perkSub">強化を1つ選ぶ</p>
+    <div class="cards" id="cards"></div>
+  </div>
+
+  <div class="modal" id="mOver" hidden>
+    <h2>砦 陥落</h2>
+    <p id="overText">WAVE 7 まで耐えた</p>
+    <p id="overBest"></p>
+    <button class="big" id="retryBtn" type="button">もう一度</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const cvs = $('c'), g = cvs.getContext('2d');
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+  };
+
+  // ---------- data ----------
+  const COLS = 5, ROWS = 3, FIELD = 8, WALLY = 8.15, BOARDY = 8.55, MAXLV = 5;
+  const UNITS = {
+    archer: { n: '弓', name: '弓兵', col: '#4aa8ff', dmg: 7, rate: 1.5, range: 6.5, note: '単体・長射程。装甲に弱い' },
+    mage:   { n: '魔', name: '魔法使い', col: '#b07bff', dmg: 6, rate: 0.75, range: 4.2, splash: 1.0, note: '範囲攻撃。群れに強い' },
+    frost:  { n: '氷', name: '氷術師', col: '#5fe0ea', dmg: 3, rate: 1.0, range: 4.2, splash: 0.7, slow: 0.35, note: '範囲スロー' },
+    cannon: { n: '砲', name: '大砲', col: '#ff8a4a', dmg: 26, rate: 0.33, range: 99, note: '縦一列を貫通。装甲無視' },
+    gold:   { n: '金', name: '金鉱', col: '#ffcc33', dmg: 0, rate: 0, range: 0, note: '攻撃しない。ウェーブ毎に収入' }
+  };
+  const TYPES = Object.keys(UNITS);
+  const ENEMIES = {
+    grunt:  { name: '雑兵', col: '#7ac74f', hp: 22, spd: 0.75, armor: 0, coin: 1, hit: 1, r: 0.28 },
+    runner: { name: '俊足', col: '#ffb13b', hp: 13, spd: 1.5, armor: 0, coin: 1, hit: 1, r: 0.24 },
+    swarm:  { name: '群れ', col: '#c08cff', hp: 9, spd: 0.9, armor: 0, coin: 1, hit: 1, r: 0.2 },
+    tank:   { name: '重装', col: '#9aa6b8', hp: 85, spd: 0.45, armor: 4, coin: 3, hit: 2, r: 0.34 },
+    boss:   { name: 'ボス', col: '#ff4f6d', hp: 750, spd: 0.27, armor: 6, coin: 25, hit: 10, r: 0.46 }
+  };
+  const lvMul = lv => Math.pow(2.1, lv - 1);
+
+  const PERKS = [
+    { id: 'arrow', ic: '弓', col: '#4aa8ff', t: '鋭い矢', d: '弓兵の攻撃 +35%', f: m => m.dmg.archer *= 1.35 },
+    { id: 'magic', ic: '魔', col: '#b07bff', t: '大魔法', d: '魔法の攻撃 +30%、範囲 +20%', f: m => { m.dmg.mage *= 1.3; m.splash *= 1.2; } },
+    { id: 'ice', ic: '氷', col: '#5fe0ea', t: '絶対零度', d: 'スロー +12%、氷の攻撃 +50%', f: m => { m.slow += 0.12; m.dmg.frost *= 1.5; } },
+    { id: 'ap', ic: '砲', col: '#ff8a4a', t: '徹甲弾', d: '大砲の攻撃 +40%', f: m => m.dmg.cannon *= 1.4 },
+    { id: 'haste', ic: '速', col: '#7ee07a', t: '早撃ち', d: '全ユニットの攻撃速度 +12%', f: m => m.rate *= 1.12 },
+    { id: 'cheap', ic: '安', col: '#ffcc33', t: '値切り', d: '召喚コスト -20%', f: m => m.cost *= 0.8 },
+    { id: 'interest', ic: '利', col: '#ffcc33', t: '利子', d: 'ウェーブ終了時、所持コインの15%を追加', f: m => m.interest += 0.15 },
+    { id: 'elite', ic: '英', col: '#eef6ee', t: '英才教育', d: '召喚時 25% の確率で Lv2', f: m => m.lv2 += 0.25 },
+    { id: 'vein', ic: '金', col: '#ffcc33', t: '金脈', d: '金鉱の収入 +60%', f: m => m.gold *= 1.6 },
+    { id: 'wall', ic: '壁', col: '#ff5a6e', t: '城壁修理', d: '城壁を 6 回復', f: m => { wall += 6; } },
+    { id: 'scope', ic: '眼', col: '#eef6ee', t: '遠見', d: '全ユニットの射程 +0.8', f: m => m.range += 0.8 },
+    { id: 'cash', ic: '￥', col: '#ffcc33', t: '臨時収入', d: 'すぐにコインを獲得', f: m => { coins += 20 + wave * 5; } }
+  ];
+
+  // ---------- state ----------
+  let W, Ht, dpr, S, OX, OY;
+  let state = 'title', wave, wall, coins, summons, grid, enemies, shots, fx, queue, spawnT, mods, perkCount, timeScale = 1, t = 0;
+  let selected = null, drag = null, best = +store.get('gt.best', '0') || 0;
+
+  function newMods() {
+    return { dmg: { archer: 1, mage: 1, frost: 1, cannon: 1 }, rate: 1, splash: 1, slow: 0, cost: 1, interest: 0, lv2: 0, gold: 1, range: 0 };
+  }
+
+  function reset() {
+    wave = 1; wall = 20; coins = 40; summons = 0;
+    grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    enemies = []; shots = []; fx = []; queue = []; mods = newMods(); perkCount = {};
+    selected = null; drag = null;
+    state = 'build';
+    planWave(); ui();
+  }
+
+  // ---------- waves ----------
+  let plan = [];
+  function planWave() {
+    const w = wave;
+    const pool = ['grunt'];
+    if (w >= 2) pool.push('runner');
+    if (w >= 3) pool.push('swarm');
+    if (w >= 4) pool.push('tank');
+    const n = 6 + Math.floor(w * 2.2);
+    plan = [];
+    for (let i = 0; i < n; i++) {
+      let tp = pool[Math.floor(Math.random() * pool.length)];
+      if (w % 3 === 0 && Math.random() < 0.35 && pool.includes('swarm')) tp = 'swarm';
+      if (w % 4 === 0 && Math.random() < 0.3 && pool.includes('tank')) tp = 'tank';
+      plan.push(tp);
+    }
+    if (w % 5 === 0) plan.push('boss');
+  }
+
+  function startWave() {
+    if (state !== 'build') return;
+    state = 'wave';
+    const gap = Math.max(0.32, 1.0 - wave * 0.03);
+    queue = []; let at = 0.4;
+    for (const tp of plan) {
+      const lane = Math.floor(Math.random() * COLS);
+      if (tp === 'swarm') { for (let k = 0; k < 4; k++) queue.push({ tp, lane, at: at + k * 0.22 }); at += gap * 1.6; }
+      else { queue.push({ tp, lane, at }); at += tp === 'tank' ? gap * 1.4 : gap; }
+    }
+    spawnT = 0;
+    sfx.go(); ui();
+  }
+
+  function spawn(tp, lane) {
+    const b = ENEMIES[tp];
+    const hpMul = Math.pow(1.17, wave - 1) * (1 + Math.max(0, wave - 10) * 0.04);
+    const hp = Math.round(b.hp * hpMul);
+    enemies.push({ tp, x: lane + 0.5 + (Math.random() - 0.5) * 0.3, y: -0.4, hp, max: hp, spd: b.spd, armor: b.armor + Math.floor(wave / 8), slowT: 0, slowA: 0, flash: 0, wob: Math.random() * 6 });
+  }
+
+  function endWave() {
+    let goldInc = 0;
+    eachUnit(u => { if (u.type === 'gold') goldInc += Math.round(5 * Math.pow(2, u.lv - 1) * mods.gold); });
+    const base = 8 + wave * 2, intr = Math.floor(coins * mods.interest);
+    coins += base + goldInc + intr;
+    const parts = [`基本 +${base}`];
+    if (goldInc) parts.push(`金鉱 +${goldInc}`);
+    if (intr) parts.push(`利子 +${intr}`);
+    sfx.clear();
+    state = 'perk';
+    $('perkTitle').textContent = wave % 5 === 0 ? `ボス撃破！ WAVE ${wave}` : `WAVE ${wave} 突破！`;
+    $('perkSub').textContent = `${parts.join('　')}　― 強化を1つ選ぶ`;
+    const picks = [...PERKS].sort(() => Math.random() - 0.5).slice(0, 3);
+    const box = $('cards'); box.innerHTML = '';
+    for (const p of picks) {
+      const b = document.createElement('button');
+      b.className = 'card'; b.type = 'button';
+      const n = perkCount[p.id] || 0;
+      b.innerHTML = `<div class="ic" style="background:${p.col}">${p.ic}</div><div><div class="t">${p.t}${n ? `<span class="stack">所持 ×${n}</span>` : ''}</div><div class="d">${p.d}</div></div>`;
+      b.addEventListener('click', () => {
+        p.f(mods); perkCount[p.id] = n + 1;
+        $('mPerk').hidden = true;
+        wave++; state = 'build'; planWave(); sfx.pick(); ui();
+      });
+      box.appendChild(b);
+    }
+    $('mPerk').hidden = false;
+    ui();
+  }
+
+  function gameOver() {
+    state = 'over'; sfx.lose();
+    const reached = wave;
+    const isBest = reached > best;
+    if (isBest) { best = reached; store.set('gt.best', String(best)); }
+    $('overText').textContent = `WAVE ${reached} で陥落`;
+    $('overBest').textContent = isBest ? '自己ベスト更新！' : `自己ベスト WAVE ${best}`;
+    setTimeout(() => { $('mOver').hidden = false; }, 600);
+  }
+
+  // ---------- units ----------
+  function eachUnit(f) { for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c]) f(grid[r][c], r, c); }
+  const cost = () => Math.round((10 + summons * 3) * mods.cost);
+  const unitPos = (r, c) => ({ x: c + 0.5, y: BOARDY + r + 0.5 });
+  const sellValue = u => Math.round(5 * Math.pow(2, u.lv - 1));
+  function stat(u) {
+    const b = UNITS[u.type];
+    return {
+      dmg: b.dmg * lvMul(u.lv) * (mods.dmg[u.type] || 1),
+      rate: b.rate * mods.rate * (1 + (u.lv - 1) * 0.06),
+      range: u.type === 'cannon' ? 99 : b.range + mods.range + (u.lv - 1) * 0.2,
+      splash: (b.splash || 0) * mods.splash,
+      slow: b.slow ? Math.min(0.8, b.slow + mods.slow + (u.lv - 1) * 0.05) : 0
+    };
+  }
+
+  function summon() {
+    if (state === 'title' || state === 'over' || state === 'perk') return;
+    const empty = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (!grid[r][c]) empty.push([r, c]);
+    const cst = cost();
+    if (!empty.length) { info('盤面がいっぱい。合成か売却で空きを作ろう。'); return; }
+    if (coins < cst) { info(`コインが足りない（あと ${cst - coins}）`); return; }
+    coins -= cst; summons++;
+    const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+    const type = TYPES[Math.floor(Math.random() * TYPES.length)];
+    const lv = Math.random() < mods.lv2 ? 2 : 1;
+    grid[r][c] = { type, lv, cd: Math.random() * 0.5, pop: 0.25 };
+    sfx.summon(); ui();
+    describe(grid[r][c]);
+  }
+
+  // ---------- combat ----------
+  function damage(e, d, pierceArmor) {
+    const real = pierceArmor ? d : Math.max(1, d - e.armor);
+    e.hp -= real; e.flash = 0.08;
+  }
+  function kill(e) {
+    const b = ENEMIES[e.tp];
+    coins += b.coin;
+    fx.push({ k: 'coin', x: e.x, y: e.y, t: 0, text: `+${b.coin}` });
+    fx.push({ k: 'pop', x: e.x, y: e.y, t: 0, col: b.col, r: b.r });
+    if (e.tp === 'boss') sfx.boom(); else sfx.pop();
+  }
+
+  function update(dt) {
+    t += dt;
+    if (state === 'wave') {
+      spawnT += dt;
+      while (queue.length && queue[0].at <= spawnT) { const q = queue.shift(); spawn(q.tp, q.lane); }
+    }
+
+    // enemies
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      if (e.slowT > 0) e.slowT -= dt; else e.slowA = 0;
+      e.y += e.spd * (1 - e.slowA) * dt;
+      if (e.flash > 0) e.flash -= dt;
+      if (e.y >= WALLY - ENEMIES[e.tp].r) {
+        wall -= ENEMIES[e.tp].hit; enemies.splice(i, 1);
+        fx.push({ k: 'hitwall', x: e.x, t: 0 }); sfx.wall(); buzz(30);
+        if (wall <= 0 && state !== 'over') { wall = 0; gameOver(); }
+      }
+    }
+
+    // units fire
+    if (state === 'wave') eachUnit((u, r, c) => {
+      if (u.type === 'gold') return;
+      if (drag && drag.r === r && drag.c === c && drag.moved) return;
+      u.cd -= dt;
+      if (u.cd > 0) return;
+      const s = stat(u), p = unitPos(r, c);
+      if (u.type === 'cannon') {
+        const inLane = enemies.filter(e => Math.abs(e.x - p.x) < 0.5 && e.y > -0.2);
+        if (!inLane.length) return;
+        inLane.forEach(e => damage(e, s.dmg, true));
+        fx.push({ k: 'beam', x: p.x, y: p.y, t: 0 }); sfx.cannon();
+        u.cd = 1 / s.rate; u.kick = 0.15;
+        return;
+      }
+      let target = null;
+      for (const e of enemies) {
+        if (e.y < -0.2) continue;
+        const d = Math.hypot(e.x - p.x, e.y - p.y);
+        if (d <= s.range && (!target || e.y > target.y)) target = e;
+      }
+      if (!target) return;
+      shots.push({ type: u.type, x: p.x, y: p.y - 0.3, tgt: target, tx: target.x, ty: target.y, s });
+      u.cd = 1 / s.rate; u.kick = 0.12;
+      if (u.type === 'archer') sfx.arrow(); else sfx.cast();
+    });
+
+    // projectiles
+    for (let i = shots.length - 1; i >= 0; i--) {
+      const sh = shots[i];
+      if (enemies.includes(sh.tgt)) { sh.tx = sh.tgt.x; sh.ty = sh.tgt.y; }
+      const dx = sh.tx - sh.x, dy = sh.ty - sh.y, d = Math.hypot(dx, dy), sp = 13 * dt;
+      if (d <= sp) {
+        const s = sh.s;
+        if (s.splash) {
+          for (const e of enemies) if (Math.hypot(e.x - sh.tx, e.y - sh.ty) <= s.splash) {
+            damage(e, s.dmg, false);
+            if (s.slow) { e.slowA = Math.max(e.slowA, e.tp === 'boss' ? s.slow * 0.5 : s.slow); e.slowT = 1.6; }
+          }
+          fx.push({ k: 'ring', x: sh.tx, y: sh.ty, r: s.splash, t: 0, col: UNITS[sh.type].col });
+        } else if (enemies.includes(sh.tgt)) damage(sh.tgt, s.dmg, false);
+        shots.splice(i, 1);
+      } else { sh.x += dx / d * sp; sh.y += dy / d * sp; }
+    }
+
+    for (let i = enemies.length - 1; i >= 0; i--) if (enemies[i].hp <= 0) { kill(enemies[i]); enemies.splice(i, 1); }
+    for (let i = fx.length - 1; i >= 0; i--) { fx[i].t += dt; if (fx[i].t > 0.7) fx.splice(i, 1); }
+    eachUnit(u => { if (u.kick > 0) u.kick -= dt; if (u.pop > 0) u.pop -= dt; });
+
+    if (state === 'wave' && !queue.length && !enemies.length) endWave();
+    ui();
+  }
+
+  // ---------- drawing ----------
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = cvs.clientWidth; Ht = cvs.clientHeight;
+    cvs.width = W * dpr; cvs.height = Ht * dpr;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cr = cvs.getBoundingClientRect();
+    const top = $('hud').getBoundingClientRect().bottom - cr.top + 6;
+    const bot = Ht - ($('controls').getBoundingClientRect().top - cr.top) + 6;
+    S = Math.min((W - 32) / COLS, (Ht - top - bot) / (BOARDY + ROWS), 78);
+    OX = (W - S * COLS) / 2;
+    OY = top + Math.max(0, (Ht - top - bot - S * (BOARDY + ROWS)) / 2);
+  }
+  window.addEventListener('resize', resize);
+  const X = x => OX + x * S, Y = y => OY + y * S;
+
+  function rr(x, y, w, h, r) { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); }
+
+  function drawUnit(u, cx, cy, size, alpha = 1) {
+    const b = UNITS[u.type];
+    const k = u.kick > 0 ? u.kick * 0.6 : 0, p = u.pop > 0 ? u.pop * 1.2 : 0;
+    const sz = size * (0.82 + p) , y = cy + k * size * 0.4;
+    g.globalAlpha = alpha;
+    g.fillStyle = 'rgba(0,0,0,0.3)'; rr(cx - sz / 2, y - sz / 2 + 4, sz, sz, sz * 0.22); g.fill();
+    g.fillStyle = b.col; rr(cx - sz / 2, y - sz / 2, sz, sz, sz * 0.22); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.22)'; rr(cx - sz / 2, y - sz / 2, sz, sz * 0.42, sz * 0.22); g.fill();
+    g.fillStyle = '#10202a';
+    g.font = `400 ${sz * 0.5}px "DotGothic16", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(b.n, cx, y - sz * 0.06);
+    // level pips
+    const pr = Math.max(2, sz * 0.055), gap = pr * 2.6, w0 = (u.lv - 1) * gap;
+    for (let i = 0; i < u.lv; i++) {
+      g.beginPath(); g.arc(cx - w0 / 2 + i * gap, y + sz * 0.3, pr, 0, Math.PI * 2);
+      g.fillStyle = u.lv >= MAXLV ? '#fff6c2' : '#10202a'; g.fill();
+    }
+    g.globalAlpha = 1;
+  }
+
+  function draw() {
+    g.fillStyle = '#101c24'; g.fillRect(0, 0, W, Ht);
+    // field
+    g.fillStyle = '#18303b'; rr(X(0), Y(-0.2), S * COLS, S * (WALLY + 0.2), 12); g.fill();
+    for (let c = 1; c < COLS; c++) {
+      g.strokeStyle = 'rgba(147,170,178,0.12)'; g.lineWidth = 1; g.setLineDash([4, 6]);
+      g.beginPath(); g.moveTo(X(c), Y(-0.1)); g.lineTo(X(c), Y(WALLY)); g.stroke();
+    }
+    g.setLineDash([]);
+    // danger tint near wall
+    const dg = g.createLinearGradient(0, Y(WALLY - 2.5), 0, Y(WALLY));
+    dg.addColorStop(0, 'rgba(255,90,110,0)'); dg.addColorStop(1, 'rgba(255,90,110,0.12)');
+    g.fillStyle = dg; g.fillRect(X(0), Y(WALLY - 2.5), S * COLS, S * 2.5);
+    // wall
+    const wallHit = fx.some(f => f.k === 'hitwall');
+    g.fillStyle = wallHit ? '#ff5a6e' : '#5b4a3e';
+    rr(X(0), Y(WALLY), S * COLS, S * 0.28, 4); g.fill();
+    g.fillStyle = 'rgba(0,0,0,0.25)';
+    for (let i = 0; i < COLS * 3; i++) g.fillRect(X(i / 3) + 1, Y(WALLY) + S * 0.14, S / 3 - 2, 1.5);
+
+    // selected range
+    if (selected && grid[selected.r][selected.c] && !drag?.moved) {
+      const u = grid[selected.r][selected.c], s = stat(u), p = unitPos(selected.r, selected.c);
+      g.save(); g.beginPath(); g.rect(X(0), Y(-0.2), S * COLS, S * (WALLY + 0.2)); g.clip();
+      if (u.type === 'cannon') { g.fillStyle = 'rgba(255,138,74,0.12)'; g.fillRect(X(p.x - 0.5), Y(-0.2), S, S * (WALLY + 0.2)); }
+      else if (s.range > 0) {
+        g.beginPath(); g.arc(X(p.x), Y(p.y), s.range * S, 0, Math.PI * 2);
+        g.fillStyle = 'rgba(238,246,238,0.07)'; g.fill();
+        g.strokeStyle = 'rgba(238,246,238,0.35)'; g.lineWidth = 1.5; g.stroke();
+      }
+      g.restore();
+    }
+
+    // enemies
+    for (const e of enemies) {
+      const b = ENEMIES[e.tp], x = X(e.x), y = Y(e.y + Math.sin(t * 8 + e.wob) * 0.03), r = b.r * S;
+      g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(x, y + r * 0.85, r * 0.9, r * 0.3, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = e.flash > 0 ? '#ffffff' : b.col;
+      if (e.tp === 'tank' || e.tp === 'boss') { rr(x - r, y - r, r * 2, r * 2, r * 0.45); g.fill(); }
+      else { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+      if (e.slowA > 0) { g.strokeStyle = '#5fe0ea'; g.lineWidth = 2; g.stroke(); }
+      // eyes
+      g.fillStyle = '#10202a';
+      g.beginPath(); g.arc(x - r * 0.35, y + r * 0.1, r * 0.14, 0, Math.PI * 2); g.arc(x + r * 0.35, y + r * 0.1, r * 0.14, 0, Math.PI * 2); g.fill();
+      if (e.tp === 'boss') {
+        g.fillStyle = '#ffcc33';
+        g.beginPath(); g.moveTo(x - r * 0.7, y - r); g.lineTo(x - r * 0.45, y - r * 1.5); g.lineTo(x - r * 0.2, y - r); g.moveTo(x + r * 0.2, y - r); g.lineTo(x + r * 0.45, y - r * 1.5); g.lineTo(x + r * 0.7, y - r); g.fill();
+      }
+      if (e.hp < e.max) {
+        const w = r * 2.2;
+        g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(x - w / 2, y - r - 8, w, 4);
+        g.fillStyle = e.armor ? '#cfd8e3' : '#7ee07a'; g.fillRect(x - w / 2, y - r - 8, w * Math.max(0, e.hp / e.max), 4);
+      }
+    }
+
+    // board
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const x = X(c), y = Y(BOARDY + r);
+      let fill = '#1b2d38';
+      if (drag?.moved) {
+        const tgt = grid[r][c], src = grid[drag.r][drag.c];
+        if (tgt && src && tgt !== src && tgt.type === src.type && tgt.lv === src.lv && tgt.lv < MAXLV) fill = '#2e5a3e';
+        if (drag.hr === r && drag.hc === c) fill = '#35525f';
+      }
+      g.fillStyle = fill; rr(x + 3, y + 3, S - 6, S - 6, 10); g.fill();
+      if (selected && selected.r === r && selected.c === c) { g.strokeStyle = '#ffcc33'; g.lineWidth = 2; rr(x + 3, y + 3, S - 6, S - 6, 10); g.stroke(); }
+    }
+    eachUnit((u, r, c) => {
+      const p = unitPos(r, c);
+      if (drag?.moved && drag.r === r && drag.c === c) { drawUnit(u, X(p.x), Y(p.y), S * 0.82, 0.25); return; }
+      drawUnit(u, X(p.x), Y(p.y), S * 0.82);
+    });
+
+    // shots
+    for (const sh of shots) {
+      const col = UNITS[sh.type].col;
+      g.fillStyle = col; g.beginPath(); g.arc(X(sh.x), Y(sh.y), sh.type === 'archer' ? 3 : 5, 0, Math.PI * 2); g.fill();
+    }
+    // fx
+    for (const f of fx) {
+      const k = f.t / 0.7;
+      if (f.k === 'beam') {
+        g.fillStyle = `rgba(255,170,90,${0.6 * (1 - k)})`;
+        g.fillRect(X(f.x - 0.18 + k * 0.1), Y(-0.2), S * (0.36 - k * 0.2), Y(f.y) - Y(-0.2));
+      } else if (f.k === 'ring') {
+        g.strokeStyle = f.col; g.globalAlpha = 1 - k; g.lineWidth = 3;
+        g.beginPath(); g.arc(X(f.x), Y(f.y), f.r * S * (0.4 + k * 0.6), 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+      } else if (f.k === 'coin') {
+        g.globalAlpha = 1 - k; g.fillStyle = '#ffcc33';
+        g.font = `400 ${Math.max(12, S * 0.28)}px "DotGothic16", monospace`; g.textAlign = 'center';
+        g.fillText(f.text, X(f.x), Y(f.y - k * 0.8)); g.globalAlpha = 1;
+      } else if (f.k === 'pop') {
+        g.fillStyle = f.col; g.globalAlpha = 1 - k;
+        for (let i = 0; i < 6; i++) {
+          const a = i / 6 * Math.PI * 2, d = f.r * S * (0.5 + k * 1.6);
+          g.beginPath(); g.arc(X(f.x) + Math.cos(a) * d, Y(f.y) + Math.sin(a) * d, 3, 0, Math.PI * 2); g.fill();
+        }
+        g.globalAlpha = 1;
+      }
+    }
+
+    // dragged unit
+    if (drag?.moved) {
+      const u = grid[drag.r][drag.c];
+      if (u) drawUnit(u, drag.x, drag.y - S * 0.3, S * 0.9);
+    }
+  }
+
+  // ---------- ui ----------
+  let infoLock = 0;
+  function info(html) { $('info').innerHTML = html; infoLock = performance.now() + 2500; }
+  function describe(u) {
+    const b = UNITS[u.type], s = stat(u);
+    if (u.type === 'gold') info(`<b>${b.name} Lv${u.lv}</b>｜ウェーブ毎 +${Math.round(5 * Math.pow(2, u.lv - 1) * mods.gold)} コイン｜売却 ${sellValue(u)}`);
+    else info(`<b>${b.name} Lv${u.lv}</b>｜攻撃 ${Math.round(s.dmg)}・毎秒 ${s.rate.toFixed(2)}${u.type === 'cannon' ? '' : `・射程 ${s.range.toFixed(1)}`}<br>${b.note}｜売却 ${sellValue(u)}`);
+  }
+  let lastUI = '';
+  function ui() {
+    const cst = cost();
+    const key = [wave, wall, coins, cst, state].join('|');
+    if (key === lastUI) return; lastUI = key;
+    $('wave').textContent = wave;
+    $('wallN').textContent = wall;
+    $('coinN').textContent = coins;
+    $('cost').textContent = cst;
+    $('summon').disabled = coins < cst || !(state === 'build' || state === 'wave');
+    const go = $('go');
+    go.disabled = state !== 'build';
+    go.classList.toggle('running', state === 'wave');
+    go.textContent = state === 'wave' ? `WAVE ${wave} 進行中` : `WAVE ${wave} 開始`;
+    // preview
+    const cnt = {};
+    plan.forEach(p => cnt[p] = (cnt[p] || 0) + (p === 'swarm' ? 4 : 1));
+    $('preview').innerHTML = (state === 'build' ? '<span class="pv" style="padding-left:8px">次の敵</span>' : '') +
+      Object.entries(cnt).map(([k, v]) => `<span class="pv"><i style="background:${ENEMIES[k].col}"></i>${ENEMIES[k].name} ×${v}</span>`).join('');
+    if (performance.now() > infoLock && state === 'build' && !selected) {
+      $('info').innerHTML = wave === 1 && !summons ? '<b>召喚</b>でユニットを出そう。同じ種類・同じLvを重ねると合成。'
+        : '並べ替え・合成して準備ができたら <b>WAVE開始</b>。';
+    }
+  }
+
+  // ---------- input ----------
+  function local(e) { const r = cvs.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+  function cellAt(clientX, clientY) {
+    const r0 = cvs.getBoundingClientRect(); clientX -= r0.left; clientY -= r0.top;
+    const wx = (clientX - OX) / S, wy = (clientY - OY) / S - BOARDY;
+    const c = Math.floor(wx), r = Math.floor(wy);
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return null;
+    return { r, c };
+  }
+  function overSell(x, y) {
+    const b = $('sell').getBoundingClientRect();
+    return y >= b.top - 10 && x >= b.left && x <= b.right;
+  }
+  cvs.addEventListener('pointerdown', e => {
+    if (state === 'title' || state === 'over' || state === 'perk') return;
+    audio();
+    const cell = cellAt(e.clientX, e.clientY);
+    if (!cell || !grid[cell.r][cell.c]) { selected = null; return; }
+    const [lx, ly] = local(e);
+    drag = { r: cell.r, c: cell.c, sx: lx, sy: ly, x: lx, y: ly, moved: false };
+    try { cvs.setPointerCapture(e.pointerId); } catch {}
+  });
+  cvs.addEventListener('pointermove', e => {
+    if (!drag) return;
+    [drag.x, drag.y] = local(e);
+    if (!drag.moved && Math.hypot(drag.x - drag.sx, drag.y - drag.sy) > 8) { drag.moved = true; selected = null; $('sell').hidden = false; }
+    if (drag.moved) {
+      const h = cellAt(e.clientX, e.clientY);
+      drag.hr = h?.r; drag.hc = h?.c;
+      $('sell').classList.toggle('hot', overSell(e.clientX, e.clientY));
+    }
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    const d = drag; drag = null; $('sell').hidden = true; $('sell').classList.remove('hot');
+    const src = grid[d.r][d.c];
+    if (!src) return;
+    if (!d.moved) { selected = { r: d.r, c: d.c }; describe(src); return; }
+    if (overSell(e.clientX, e.clientY)) {
+      coins += sellValue(src); grid[d.r][d.c] = null; sfx.sell(); info(`${UNITS[src.type].name} Lv${src.lv} を売却 +${sellValue(src)}`); ui(); return;
+    }
+    const tc = cellAt(e.clientX, e.clientY);
+    if (!tc || (tc.r === d.r && tc.c === d.c)) return;
+    const tgt = grid[tc.r][tc.c];
+    if (tgt && tgt.type === src.type && tgt.lv === src.lv && tgt.lv < MAXLV) {
+      tgt.lv++; tgt.pop = 0.3; tgt.cd = 0.2; grid[d.r][d.c] = null;
+      sfx.merge(tgt.lv); buzz(15);
+      fx.push({ k: 'ring', x: tc.c + 0.5, y: BOARDY + tc.r + 0.5, r: 0.6, t: 0, col: UNITS[tgt.type].col });
+      selected = { r: tc.r, c: tc.c }; describe(tgt);
+    } else {
+      grid[tc.r][tc.c] = src; grid[d.r][d.c] = tgt; sfx.move();
+      selected = { r: tc.r, c: tc.c };
+    }
+  }
+  cvs.addEventListener('pointerup', endDrag);
+  cvs.addEventListener('pointercancel', () => { drag = null; $('sell').hidden = true; });
+
+  $('summon').addEventListener('click', () => { audio(); summon(); });
+  $('go').addEventListener('click', () => { audio(); selected = null; startWave(); });
+  $('speed').addEventListener('click', () => { timeScale = timeScale === 1 ? 2 : 1; $('speed').textContent = `×${timeScale}`; });
+  $('startBtn').addEventListener('click', () => { audio(); $('mTitle').hidden = true; reset(); resize(); });
+  $('retryBtn').addEventListener('click', () => { $('mOver').hidden = true; reset(); });
+
+  $('legend').innerHTML = TYPES.map(k => `<div class="lg"><b style="background:${UNITS[k].col}">${UNITS[k].n}</b>${UNITS[k].note.replace('。', '<br>')}</div>`).join('');
+
+  // ---------- audio ----------
+  let ac = null;
+  function audio() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { ac = null; } }
+    if (ac && ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  const lastT = {};
+  function tone(f, dur = 0.1, type = 'triangle', vol = 0.1, slide = 0, delay = 0, key) {
+    const a = ac; if (!a || a.state !== 'running') return;
+    if (key) { const now = performance.now(); if (now - (lastT[key] || 0) < 60) return; lastT[key] = now; }
+    const t0 = a.currentTime + delay, o = a.createOscillator(), v = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f * slide), t0 + dur);
+    v.gain.setValueAtTime(0.0001, t0); v.gain.exponentialRampToValueAtTime(vol, t0 + 0.005);
+    v.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(v).connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  const m = n => 440 * Math.pow(2, (n - 69) / 12);
+  const sfx = {
+    summon() { tone(m(72), 0.08); tone(m(79), 0.12, 'triangle', 0.1, 0, 0.06); },
+    merge(lv) { [0, 4, 7, 12].slice(0, lv).forEach((d, i) => tone(m(67 + lv * 2 + d), 0.12, 'square', 0.06, 0, i * 0.05)); },
+    move() { tone(m(64), 0.05, 'triangle', 0.06); },
+    sell() { tone(m(76), 0.06, 'square', 0.05); tone(m(71), 0.1, 'square', 0.05, 0, 0.06); },
+    go() { [60, 64, 67].forEach((n, i) => tone(m(n), 0.15, 'sawtooth', 0.05, 0, i * 0.08)); },
+    arrow() { tone(1800, 0.03, 'square', 0.012, 0.6, 0, 'ar'); },
+    cast() { tone(m(84), 0.08, 'sine', 0.03, 0.7, 0, 'ca'); },
+    cannon() { tone(120, 0.25, 'sawtooth', 0.09, 0.4, 0, 'cn'); },
+    pop() { tone(m(88), 0.05, 'triangle', 0.04, 0, 0, 'po'); },
+    boom() { tone(90, 0.6, 'sawtooth', 0.15, 0.3); },
+    wall() { tone(80, 0.25, 'square', 0.1, 0.5, 0, 'wl'); },
+    clear() { [72, 76, 79, 84].forEach((n, i) => tone(m(n), 0.18, 'triangle', 0.1, 0, i * 0.09)); },
+    pick() { tone(m(84), 0.12, 'triangle', 0.1); },
+    lose() { [60, 56, 53, 48].forEach((n, i) => tone(m(n), 0.3, 'sawtooth', 0.06, 0.8, i * 0.15)); }
+  };
+  function buzz(p) { try { navigator.vibrate && navigator.vibrate(p); } catch {} }
+
+  // ---------- loop ----------
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05); last = now;
+    if (state === 'wave' || state === 'build') {
+      const steps = timeScale;
+      for (let i = 0; i < steps; i++) update(dt);
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // demo board behind the title screen
+  reset();
+  state = 'title';
+  grid[0][1] = { type: 'archer', lv: 2, cd: 0 }; grid[0][3] = { type: 'mage', lv: 1, cd: 0 };
+  grid[1][2] = { type: 'cannon', lv: 1, cd: 0 }; grid[2][0] = { type: 'gold', lv: 1, cd: 0 };
+  enemies.push({ tp: 'grunt', x: 1.5, y: 3.2, hp: 22, max: 22, spd: 0, armor: 0, slowT: 0, slowA: 0, flash: 0, wob: 1 });
+  enemies.push({ tp: 'tank', x: 3.5, y: 1.8, hp: 60, max: 85, spd: 0, armor: 4, slowT: 0, slowA: 0, flash: 0, wob: 2 });
+  resize();
+  requestAnimationFrame(tt => { last = tt; frame(tt); });
+})();
+</script>
+
+
+</body>
+</html>
