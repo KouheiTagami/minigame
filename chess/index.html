@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>チェス盤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --bg: #eceae4;
+    --panel: #ffffff;
+    --ink: #22252b;
+    --dim: #6b707b;
+    --light: #efe1c6;
+    --dark: #b58863;
+    --sel: rgba(66, 135, 245, 0.55);
+    --lastc: rgba(247, 213, 76, 0.55);
+    --check: rgba(224, 73, 60, 0.75);
+    --accent: #2f5e8f;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { color-scheme: dark; --bg: #1b1d22; --panel: #262930; --ink: #eceef2; --dim: #9aa0ac; --accent: #8db4e2; }
+  }
+  :root[data-theme="dark"] { color-scheme: dark; --bg: #1b1d22; --panel: #262930; --ink: #eceef2; --dim: #9aa0ac; --accent: #8db4e2; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  main { max-width: 500px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 28px; display: flex; flex-direction: column; gap: 12px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 0.04em; }
+  .rec { font-size: 12px; color: var(--dim); font-weight: 700; }
+  .opts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg { display: flex; background: var(--panel); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button { font: 700 12px var(--body); color: var(--dim); background: transparent; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+
+  .bar { display: flex; justify-content: space-between; align-items: center; min-height: 26px; font-size: 13px; font-weight: 700; }
+  .caps { font-size: 18px; letter-spacing: -2px; color: var(--dim); min-height: 22px; }
+  .board-wrap { position: relative; }
+  .board { display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1; width: 100%; max-width: 100%; border-radius: 6px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.18); touch-action: manipulation; }
+  .sq { position: relative; display: grid; place-items: center; cursor: pointer; }
+  .sq.l { background: var(--light); } .sq.d { background: var(--dark); }
+  .sq.last::before, .sq.sel::before, .sq.chk::before { content: ""; position: absolute; inset: 0; }
+  .sq.last::before { background: var(--lastc); }
+  .sq.sel::before { background: var(--sel); }
+  .sq.chk::before { background: radial-gradient(circle, var(--check) 20%, transparent 75%); }
+  .coord { position: absolute; font: 500 9px var(--mono); opacity: 0.7; }
+  .sq.l .coord { color: var(--dark); } .sq.d .coord { color: var(--light); }
+  .coord.f { right: 3px; bottom: 1px; } .coord.r { left: 3px; top: 2px; }
+  .pc { position: relative; font-size: clamp(28px, 9.4vw, 46px); line-height: 1; z-index: 1; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Apple Symbols", serif; }
+  .pc.w { color: #fbfbf8; text-shadow: 0 0 1px #000, 0 0 1px #000, 0 1px 1px #000, 0 2px 2px rgba(0,0,0,0.35); }
+  .pc.b { color: #1d1d1f; text-shadow: 0 0 1px rgba(255,255,255,0.5), 0 2px 2px rgba(0,0,0,0.3); }
+  .mv { position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(20, 30, 40, 0.28); z-index: 2; }
+  .mv.cap { width: 86%; height: 86%; background: transparent; border: 4px solid rgba(20, 30, 40, 0.28); box-sizing: border-box; }
+
+  .status { text-align: center; font-weight: 700; font-size: 14px; min-height: 20px; color: var(--accent); }
+  .moves { font: 500 12px var(--mono); color: var(--dim); background: var(--panel); border-radius: 10px; padding: 8px 10px; max-height: 64px; overflow-y: auto; line-height: 1.6; }
+  .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tools button { font: 700 14px var(--body); color: var(--ink); background: var(--panel); border: none; border-radius: 12px; padding: 12px 0; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:disabled { opacity: 0.4; }
+
+  .modal { position: fixed; inset: 0; z-index: 10; background: rgba(0,0,0,0.5); display: grid; place-items: center; padding-inline: 16px; }
+  .card { background: var(--panel); border-radius: 18px; padding: 22px 18px; width: 100%; max-width: 320px; text-align: center; display: flex; flex-direction: column; gap: 10px; }
+  .card h2 { margin: 0; font-size: 24px; font-weight: 900; }
+  .card p { margin: 0; color: var(--dim); font-size: 13px; }
+  .card .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .card .row button { font-size: 40px; background: var(--light); border: none; border-radius: 12px; padding: 6px 0; cursor: pointer; }
+  .card .go { font: 700 15px var(--body); background: var(--ink); color: var(--panel); border: none; border-radius: 12px; padding: 12px; cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>チェス盤</h1><span class="rec" id="rec"></span></header>
+  <div class="opts">
+    <div class="seg" id="lvSeg" role="group" aria-label="CPUの強さ"><button type="button" data-v="1">よわい</button><button type="button" data-v="2">ふつう</button><button type="button" data-v="3">つよい</button></div>
+    <div class="seg" id="colSeg" role="group" aria-label="手番"><button type="button" data-v="w">白（先手）</button><button type="button" data-v="b">黒（後手）</button></div>
+  </div>
+  <div class="bar"><span id="topName">CPU</span><span class="caps" id="topCaps"></span></div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+  <div class="bar"><span id="botName">あなた</span><span class="caps" id="botCaps"></span></div>
+  <div class="status" id="status">あなたの番です</div>
+  <div class="moves" id="moves" aria-label="棋譜">―</div>
+  <div class="tools"><button type="button" id="undo">待った</button><button type="button" id="newg">新しい対局</button></div>
+</main>
+
+<div class="modal" id="promo" hidden>
+  <div class="card"><h2>成る駒を選ぶ</h2><div class="row" id="promoRow"></div></div>
+</div>
+<div class="modal" id="over" hidden>
+  <div class="card"><h2 id="oTitle">チェックメイト！</h2><p id="oSub"></p><button type="button" class="go" id="oBtn">もう一局</button></div>
+</div>
+
+<script>
+// ===== ENGINE START =====
+const Chess = (() => {
+  const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
+  const VAL = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 0 };
+  const PST = {
+    P: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+    N: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30, -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30, -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+    B: [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10, -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10, -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+    R: [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+    Q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+    K: [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20],
+    KE: [-50,-40,-30,-20,-20,-30,-40,-50, -30,-20,-10,0,0,-10,-20,-30, -30,-10,20,30,30,20,-10,-30, -30,-10,30,40,40,30,-10,-30, -30,-10,30,40,40,30,-10,-30, -30,-10,20,30,30,20,-10,-30, -30,-30,0,0,0,0,-30,-30, -50,-30,-30,-30,-30,-30,-30,-50]
+  };
+  const isW = p => p && p === p.toUpperCase();
+  const colorOf = p => p ? (isW(p) ? 'w' : 'b') : null;
+  const R = i => i >> 3, C = i => i & 7;
+  const NAME = 'abcdefgh';
+  const sqName = i => NAME[C(i)] + (8 - R(i));
+
+  function start() {
+    const rows = ['rnbqkbnr', 'pppppppp', '8', '8', '8', '8', 'PPPPPPPP', 'RNBQKBNR'];
+    const b = [];
+    for (const r of rows) for (const ch of r) { if (/\d/.test(ch)) for (let k = 0; k < +ch; k++) b.push(''); else b.push(ch); }
+    return { b, turn: 'w', castle: { K: true, Q: true, k: true, q: true }, ep: -1, half: 0, full: 1 };
+  }
+  function fromFEN(f) {
+    const [pos, t, cs, ep, h, fu] = f.split(' ');
+    const b = [];
+    for (const ch of pos.replace(/\//g, '')) { if (/\d/.test(ch)) for (let k = 0; k < +ch; k++) b.push(''); else b.push(ch); }
+    const epi = ep === '-' ? -1 : (8 - +ep[1]) * 8 + NAME.indexOf(ep[0]);
+    return { b, turn: t, castle: { K: cs.includes('K'), Q: cs.includes('Q'), k: cs.includes('k'), q: cs.includes('q') }, ep: epi, half: +(h || 0), full: +(fu || 1) };
+  }
+
+  const KN = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+  const KG = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+  const DI = [[-1, -1], [-1, 1], [1, -1], [1, 1]], OR = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+  function attacked(b, sq, by) {
+    const r = R(sq), c = C(sq);
+    const up = by === 'w' ? 1 : -1; // pawns of `by` attack from this direction
+    for (const dc of [-1, 1]) {
+      const rr = r + up, cc = c + dc;
+      if (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) { const p = b[rr * 8 + cc]; if (p === (by === 'w' ? 'P' : 'p')) return true; }
+    }
+    for (const [dr, dc] of KN) { const rr = r + dr, cc = c + dc; if (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) { const p = b[rr * 8 + cc]; if (p && colorOf(p) === by && p.toUpperCase() === 'N') return true; } }
+    for (const [dr, dc] of KG) { const rr = r + dr, cc = c + dc; if (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) { const p = b[rr * 8 + cc]; if (p && colorOf(p) === by && p.toUpperCase() === 'K') return true; } }
+    for (const [dirs, kinds] of [[DI, 'BQ'], [OR, 'RQ']]) for (const [dr, dc] of dirs) {
+      let rr = r + dr, cc = c + dc;
+      while (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) {
+        const p = b[rr * 8 + cc];
+        if (p) { if (colorOf(p) === by && kinds.includes(p.toUpperCase())) return true; break; }
+        rr += dr; cc += dc;
+      }
+    }
+    return false;
+  }
+  const kingSq = (b, col) => b.indexOf(col === 'w' ? 'K' : 'k');
+  const inCheck = (s, col = s.turn) => attacked(s.b, kingSq(s.b, col), col === 'w' ? 'b' : 'w');
+
+  function pseudo(s) {
+    const { b, turn } = s, out = [], them = turn === 'w' ? 'b' : 'w';
+    const add = (from, to, extra = {}) => out.push({ from, to, cap: b[to], ...extra });
+    for (let i = 0; i < 64; i++) {
+      const p = b[i]; if (!p || colorOf(p) !== turn) continue;
+      const t = p.toUpperCase(), r = R(i), c = C(i);
+      if (t === 'P') {
+        const dir = turn === 'w' ? -1 : 1, startR = turn === 'w' ? 6 : 1, lastR = turn === 'w' ? 0 : 7;
+        const f = i + dir * 8;
+        const pushP = (from, to, extra) => { if (R(to) === lastR) for (const pr of 'QRBN') add(from, to, { ...extra, promo: pr }); else add(from, to, extra); };
+        if (f >= 0 && f < 64 && !b[f]) {
+          pushP(i, f, {});
+          if (r === startR && !b[f + dir * 8]) add(i, f + dir * 8, { dbl: true });
+        }
+        for (const dc of [-1, 1]) {
+          const cc = c + dc; if (cc < 0 || cc > 7) continue;
+          const to = f + dc;
+          if (b[to] && colorOf(b[to]) === them) pushP(i, to, {});
+          else if (to === s.ep) add(i, to, { epCap: to - dir * 8, cap: turn === 'w' ? 'p' : 'P' });
+        }
+      } else if (t === 'N' || t === 'K') {
+        for (const [dr, dc] of t === 'N' ? KN : KG) {
+          const rr = r + dr, cc = c + dc; if (rr < 0 || rr > 7 || cc < 0 || cc > 7) continue;
+          const to = rr * 8 + cc; if (!b[to] || colorOf(b[to]) === them) add(i, to);
+        }
+        if (t === 'K') {
+          const home = turn === 'w' ? 60 : 4, ks = turn === 'w' ? 'K' : 'k', qs = turn === 'w' ? 'Q' : 'q';
+          if (i === home && !attacked(b, i, them)) {
+            if (s.castle[ks] && !b[i + 1] && !b[i + 2] && b[i + 3] === (turn === 'w' ? 'R' : 'r') && !attacked(b, i + 1, them) && !attacked(b, i + 2, them)) add(i, i + 2, { castle: 'K' });
+            if (s.castle[qs] && !b[i - 1] && !b[i - 2] && !b[i - 3] && b[i - 4] === (turn === 'w' ? 'R' : 'r') && !attacked(b, i - 1, them) && !attacked(b, i - 2, them)) add(i, i - 2, { castle: 'Q' });
+          }
+        }
+      } else {
+        const dirs = t === 'B' ? DI : t === 'R' ? OR : DI.concat(OR);
+        for (const [dr, dc] of dirs) {
+          let rr = r + dr, cc = c + dc;
+          while (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) {
+            const to = rr * 8 + cc;
+            if (b[to]) { if (colorOf(b[to]) === them) add(i, to); break; }
+            add(i, to); rr += dr; cc += dc;
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  function make(s, m) {
+    const b = s.b.slice(), p = b[m.from], w = s.turn === 'w';
+    b[m.to] = m.promo ? (w ? m.promo : m.promo.toLowerCase()) : p; b[m.from] = '';
+    if (m.epCap !== undefined) b[m.epCap] = '';
+    if (m.castle === 'K') { b[m.to - 1] = b[m.to + 1]; b[m.to + 1] = ''; }
+    if (m.castle === 'Q') { b[m.to + 1] = b[m.to - 2]; b[m.to - 2] = ''; }
+    const castle = { ...s.castle };
+    if (p === 'K') castle.K = castle.Q = false;
+    if (p === 'k') castle.k = castle.q = false;
+    for (const sq of [m.from, m.to]) { if (sq === 63) castle.K = false; if (sq === 56) castle.Q = false; if (sq === 7) castle.k = false; if (sq === 0) castle.q = false; }
+    return {
+      b, turn: w ? 'b' : 'w', castle, ep: m.dbl ? (m.from + m.to) / 2 : -1,
+      half: p.toUpperCase() === 'P' || m.cap ? 0 : s.half + 1, full: s.full + (w ? 0 : 1)
+    };
+  }
+  function legal(s) { return pseudo(s).filter(m => !inCheck(make(s, m), s.turn)); }
+
+  function san(s, m, all) {
+    const p = s.b[m.from].toUpperCase();
+    let t;
+    if (m.castle) t = m.castle === 'K' ? 'O-O' : 'O-O-O';
+    else {
+      t = p === 'P' ? '' : p;
+      if (p !== 'P') {
+        const others = all.filter(o => o.from !== m.from && o.to === m.to && s.b[o.from] === s.b[m.from]);
+        if (others.length) {
+          if (!others.some(o => C(o.from) === C(m.from))) t += NAME[C(m.from)];
+          else if (!others.some(o => R(o.from) === R(m.from))) t += 8 - R(m.from);
+          else t += sqName(m.from);
+        }
+      }
+      if (m.cap) t += (p === 'P' ? NAME[C(m.from)] : '') + 'x';
+      t += sqName(m.to);
+      if (m.promo) t += '=' + m.promo;
+    }
+    const n = make(s, m);
+    if (inCheck(n)) t += legal(n).length ? '+' : '#';
+    return t;
+  }
+
+  function insufficient(b) {
+    const ps = b.filter(p => p && p.toUpperCase() !== 'K');
+    if (!ps.length) return true;
+    return ps.length === 1 && 'NB'.includes(ps[0].toUpperCase());
+  }
+
+  // ---------- search ----------
+  function evaluate(s) {
+    let e = 0, mat = 0;
+    for (const p of s.b) if (p && p.toUpperCase() !== 'K' && p.toUpperCase() !== 'P') mat += VAL[p.toUpperCase()];
+    const endgame = mat <= 2600;
+    for (let i = 0; i < 64; i++) {
+      const p = s.b[i]; if (!p) continue;
+      const t = p.toUpperCase(), w = isW(p);
+      const idx = w ? i : (7 - R(i)) * 8 + C(i);
+      const v = VAL[t] + (t === 'K' && endgame ? PST.KE : PST[t])[idx];
+      e += w ? v : -v;
+    }
+    return s.turn === 'w' ? e : -e;
+  }
+  const order = ms => ms.sort((a, b) => ((b.cap ? VAL[b.cap.toUpperCase()] * 10 : 0) + (b.promo ? 800 : 0)) - ((a.cap ? VAL[a.cap.toUpperCase()] * 10 : 0) + (a.promo ? 800 : 0)));
+  let nodes = 0;
+  function quiesce(s, a, beta, d) {
+    nodes++;
+    const stand = evaluate(s);
+    if (stand >= beta) return beta;
+    if (a < stand) a = stand;
+    if (d > 6) return a;
+    for (const m of order(pseudo(s).filter(m => m.cap || m.promo))) {
+      const n = make(s, m); if (inCheck(n, s.turn)) continue;
+      const v = -quiesce(n, -beta, -a, d + 1);
+      if (v >= beta) return beta;
+      if (v > a) a = v;
+    }
+    return a;
+  }
+  function search(s, depth, a, beta, ply) {
+    if (depth <= 0) return quiesce(s, a, beta, 0);
+    nodes++;
+    const ms = order(legal(s));
+    if (!ms.length) return inCheck(s) ? -100000 + ply : 0;
+    for (const m of ms) {
+      const v = -search(make(s, m), depth - 1, -beta, -a, ply + 1);
+      if (v >= beta) return beta;
+      if (v > a) a = v;
+    }
+    return a;
+  }
+  function best(s, level) {
+    const ms = order(legal(s));
+    if (!ms.length) return null;
+    if (level === 1 && Math.random() < 0.3) return ms[Math.floor(Math.random() * ms.length)];
+    const depth = level === 1 ? 1 : level === 2 ? 3 : 4;
+    nodes = 0;
+    let bestM = ms[0], bv = -Infinity;
+    const scored = [];
+    for (const m of ms) {
+      const v = -search(make(s, m), depth - 1, -Infinity, -bv + (level === 1 ? 60 : 1), 1);
+      scored.push([v, m]);
+      if (v > bv) { bv = v; bestM = m; }
+    }
+    if (level === 1) { // pick among near-best moves
+      const ok = scored.filter(([v]) => v >= bv - 60).map(x => x[1]);
+      return ok[Math.floor(Math.random() * ok.length)];
+    }
+    return bestM;
+  }
+
+  function perft(s, d) { if (!d) return 1; let n = 0; for (const m of legal(s)) n += perft(make(s, m), d - 1); return n; }
+
+  return { start, fromFEN, legal, make, inCheck, san, insufficient, best, perft, GLYPH, colorOf, sqName, kingSq };
+})();
+// ===== ENGINE END =====
+
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+  const LVNAME = { 1: 'よわい', 2: 'ふつう', 3: 'つよい' };
+  let level = store.get('ch.level', 2), me = store.get('ch.color', 'w');
+  const rec = store.get('ch.rec', {});
+  let s, hist, sanList, sel = -1, legalNow = [], last = null, busy = false, over = false, reps = {};
+
+  const boardEl = $('board'), sqs = [];
+  for (let k = 0; k < 64; k++) {
+    const d = document.createElement('div');
+    d.addEventListener('click', () => tap(+d.dataset.i));
+    boardEl.appendChild(d); sqs.push(d);
+  }
+
+  function render() {
+    const flip = me === 'b';
+    const chk = Chess.inCheck(s) ? Chess.kingSq(s.b, s.turn) : -1;
+    const targets = sel >= 0 ? legalNow.filter(m => m.from === sel) : [];
+    for (let k = 0; k < 64; k++) {
+      const i = flip ? 63 - k : k, r = i >> 3, c = i & 7, d = sqs[k];
+      d.dataset.i = i;
+      d.className = 'sq ' + ((r + c) % 2 ? 'd' : 'l') + (last && (i === last.from || i === last.to) ? ' last' : '') + (i === sel ? ' sel' : '') + (i === chk ? ' chk' : '');
+      let h = '';
+      const p = s.b[i];
+      if (p) h += `<span class="pc ${Chess.colorOf(p)}">${Chess.GLYPH[p.toUpperCase()]}︎</span>`;
+      const t = targets.find(m => m.to === i);
+      if (t) h += `<span class="mv ${p || t.epCap !== undefined ? 'cap' : ''}"></span>`;
+      if (k % 8 === 0) h += `<span class="coord r">${8 - r}</span>`;
+      if (k >= 56) h += `<span class="coord f">${'abcdefgh'[c]}</span>`;
+      d.innerHTML = h;
+    }
+    // captured pieces
+    const init = { P: 8, N: 2, B: 2, R: 2, Q: 1 };
+    const count = {}; s.b.forEach(p => { if (p) count[p] = (count[p] || 0) + 1; });
+    const lost = col => Object.keys(init).map(t => {
+      const key = col === 'w' ? t : t.toLowerCase(), n = init[t] - (count[key] || 0);
+      return n > 0 ? Chess.GLYPH[t].repeat(n) : '';
+    }).join('');
+    const cpu = me === 'w' ? 'b' : 'w';
+    $('botCaps').textContent = lost(cpu); $('topCaps').textContent = lost(me);
+    $('topName').textContent = `CPU（${cpu === 'w' ? '白' : '黒'}・${LVNAME[level]}）`;
+    $('botName').textContent = `あなた（${me === 'w' ? '白' : '黒'}）`;
+    let txt = '';
+    for (let k = 0; k < sanList.length; k += 2) txt += `${k / 2 + 1}. ${sanList[k]} ${sanList[k + 1] || ''}  `;
+    $('moves').textContent = txt || '―'; $('moves').scrollTop = 1e6;
+    $('undo').disabled = busy || hist.length < 1;
+    document.querySelectorAll('#lvSeg button').forEach(x => x.setAttribute('aria-pressed', +x.dataset.v === level));
+    document.querySelectorAll('#colSeg button').forEach(x => x.setAttribute('aria-pressed', x.dataset.v === me));
+    const r = rec[level] || { w: 0, l: 0, d: 0 };
+    $('rec').textContent = `vs ${LVNAME[level]}　${r.w}勝 ${r.l}敗 ${r.d}分`;
+  }
+
+  function key(st) { return st.b.join(',') + st.turn + JSON.stringify(st.castle) + st.ep; }
+
+  function newGame() {
+    s = Chess.start(); hist = []; sanList = []; sel = -1; last = null; over = false; busy = false; reps = {};
+    reps[key(s)] = 1;
+    $('over').hidden = true;
+    legalNow = Chess.legal(s);
+    render(); step();
+  }
+
+  function sfx(cap) {
+    try {
+      const ac = sfx.ac || (sfx.ac = new (window.AudioContext || window.webkitAudioContext)());
+      const t = ac.currentTime, o = ac.createOscillator(), v = ac.createGain();
+      o.type = 'triangle'; o.frequency.setValueAtTime(cap ? 260 : 420, t); o.frequency.exponentialRampToValueAtTime(cap ? 120 : 220, t + 0.07);
+      v.gain.setValueAtTime(0.18, t); v.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+      o.connect(v).connect(ac.destination); o.start(t); o.stop(t + 0.12);
+    } catch {}
+  }
+
+  function apply(m) {
+    hist.push({ s, sanList: sanList.slice(), last, reps: { ...reps } });
+    sanList.push(Chess.san(s, m, legalNow));
+    s = Chess.make(s, m); last = m; sel = -1;
+    const k = key(s); reps[k] = (reps[k] || 0) + 1;
+    legalNow = Chess.legal(s);
+    sfx(!!m.cap); render();
+  }
+
+  function tap(i) {
+    if (over || busy || s.turn !== me) return;
+    const p = s.b[i];
+    if (sel >= 0) {
+      const ms = legalNow.filter(m => m.from === sel && m.to === i);
+      if (ms.length) {
+        if (ms.length > 1) return askPromo(ms);
+        apply(ms[0]); return step();
+      }
+    }
+    sel = p && Chess.colorOf(p) === me && legalNow.some(m => m.from === i) ? (sel === i ? -1 : i) : -1;
+    render();
+  }
+
+  function askPromo(ms) {
+    const row = $('promoRow'); row.innerHTML = '';
+    for (const pr of 'QRBN') {
+      const b = document.createElement('button'); b.type = 'button';
+      b.innerHTML = `<span class="pc ${me}">${Chess.GLYPH[pr]}︎</span>`;
+      b.addEventListener('click', () => { $('promo').hidden = true; apply(ms.find(m => m.promo === pr)); step(); });
+      row.appendChild(b);
+    }
+    $('promo').hidden = false;
+  }
+
+  function step() {
+    const st = $('status');
+    if (!legalNow.length) return finish(Chess.inCheck(s) ? (s.turn === me ? 'lose' : 'win') : 'draw', Chess.inCheck(s) ? 'チェックメイト' : 'ステイルメイト');
+    if (Chess.insufficient(s.b)) return finish('draw', '駒不足で引き分け');
+    if (s.half >= 100) return finish('draw', '50手ルールで引き分け');
+    if (reps[key(s)] >= 3) return finish('draw', '同一局面3回で引き分け');
+    if (s.turn === me) { st.textContent = Chess.inCheck(s) ? 'チェック！ あなたの番です' : 'あなたの番です'; return; }
+    st.textContent = 'CPU 考え中…'; busy = true; render();
+    setTimeout(() => {
+      const m = Chess.best(s, level);
+      busy = false;
+      if (m) apply(m);
+      step();
+    }, 300);
+  }
+
+  function finish(res, why) {
+    over = true; render();
+    const r = rec[level] || { w: 0, l: 0, d: 0 };
+    r[res === 'win' ? 'w' : res === 'lose' ? 'l' : 'd']++;
+    rec[level] = r; store.set('ch.rec', rec);
+    $('status').textContent = why;
+    $('oTitle').textContent = res === 'win' ? 'あなたの勝ち！' : res === 'lose' ? 'CPUの勝ち' : '引き分け';
+    $('oSub').textContent = `${why}（${sanList.length} 手）　通算 ${r.w}勝 ${r.l}敗 ${r.d}分`;
+    render();
+    setTimeout(() => { $('over').hidden = false; }, 700);
+  }
+
+  $('undo').addEventListener('click', () => {
+    if (busy || !hist.length) return;
+    // roll back to the last position where it was your turn
+    let h = hist.pop();
+    while (h.s.turn !== me && hist.length) h = hist.pop();
+    s = h.s; sanList = h.sanList; last = h.last; reps = h.reps; sel = -1; over = false; $('over').hidden = true;
+    legalNow = Chess.legal(s); render(); step();
+  });
+  $('newg').addEventListener('click', newGame);
+  $('oBtn').addEventListener('click', newGame);
+  $('lvSeg').addEventListener('click', e => { const v = e.target.dataset?.v; if (!v) return; level = +v; store.set('ch.level', level); render(); });
+  $('colSeg').addEventListener('click', e => { const v = e.target.dataset?.v; if (!v || busy) return; me = v; store.set('ch.color', me); newGame(); });
+
+  newGame();
+})();
+</script>
+
+</body>
+</html>

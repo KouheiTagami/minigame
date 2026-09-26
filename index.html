@@ -61,6 +61,7 @@
     font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--dim);
     border: 1px solid var(--line); border-radius: 99px; padding: 2px 9px;
   }
+  h2.sec { margin: 8px 0 -8px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: var(--dim); }
   .tag.play { color: var(--bg); background: var(--accent); border-color: var(--accent); }
 
   footer { color: var(--dim); font-size: 12.5px; line-height: 1.7; border-top: 1px solid var(--line); padding-top: 16px; }
@@ -70,11 +71,12 @@
 <body>
 <main>
   <header>
-    <div class="eyebrow">MINI GAMES · 5 TITLES</div>
+    <div class="eyebrow">GAMES · 9 TITLES</div>
     <h1>ミニゲーム<br>ポータル</h1>
-    <p class="lead">スマホのブラウザでそのまま遊べる5本。気分に合わせてどうぞ。</p>
+    <p class="lead">スマホのブラウザでそのまま遊べる9本。気分に合わせてどうぞ。</p>
   </header>
 
+  <h2 class="sec">カジュアル・パズル</h2>
   <ul>
     <li>
       <a class="game" href="stack/">
@@ -123,6 +125,50 @@
           <span class="t">ナンプレ帳</span>
           <span class="d">毎回新しい問題を自動生成。メモ・ヒント・途中保存つき、やさしい〜鬼の4段階。</span>
           <span class="meta"><span class="tag play">パズル</span><span class="tag">1問 5〜30分</span><span class="tag">ベストタイム記録</span></span>
+        </span>
+      </a>
+    </li>
+  </ul>
+
+  <h2 class="sec">ボードゲーム・テーブルゲーム</h2>
+  <ul>
+    <li>
+      <a class="game" href="mahjong/">
+        <span class="ic" style="background: linear-gradient(135deg, #145a4b, #f3c969)">雀</span>
+        <span class="body">
+          <span class="t">四人麻雀</span>
+          <span class="d">CPU3人と東風戦。リーチ・ポン・チー・カン、赤ドラ、役と符の点数計算まで対応。</span>
+          <span class="meta"><span class="tag play">CPU対戦</span><span class="tag">1半荘 15分〜</span><span class="tag">通算成績</span></span>
+        </span>
+      </a>
+    </li>
+    <li>
+      <a class="game" href="shogi/">
+        <span class="ic" style="background: linear-gradient(135deg, #e3b865, #f6e3b4)">将</span>
+        <span class="body">
+          <span class="t">将棋盤</span>
+          <span class="d">持ち駒・成り・二歩／打ち歩詰めの判定、棋譜つき。先手・後手を選べる。</span>
+          <span class="meta"><span class="tag play">CPU対戦</span><span class="tag">3段階の強さ</span><span class="tag">待ったあり</span></span>
+        </span>
+      </a>
+    </li>
+    <li>
+      <a class="game" href="chess/">
+        <span class="ic" style="background: linear-gradient(135deg, #b58863, #efe1c6)">♞</span>
+        <span class="body">
+          <span class="t">チェス盤</span>
+          <span class="d">キャスリング・アンパッサン・昇格・千日手まで対応。棋譜は標準表記。</span>
+          <span class="meta"><span class="tag play">CPU対戦</span><span class="tag">3段階の強さ</span><span class="tag">白黒を選べる</span></span>
+        </span>
+      </a>
+    </li>
+    <li>
+      <a class="game" href="othello/">
+        <span class="ic" style="background: linear-gradient(135deg, #1f7a4d, #9fe0b8)">●</span>
+        <span class="body">
+          <span class="t">オセロ盤</span>
+          <span class="d">置ける場所を表示。つよいCPUは終盤を読み切ってくる。</span>
+          <span class="meta"><span class="tag play">CPU対戦</span><span class="tag">1局 5分</span><span class="tag">勝敗記録</span></span>
         </span>
       </a>
     </li>

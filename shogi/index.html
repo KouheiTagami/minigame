@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>将棋盤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<style>
+  :root {
+    --bg: #efe8dc;
+    --panel: #fbf7f0;
+    --ink: #2a2118;
+    --dim: #7a6c5c;
+    --wood: #e3b865;
+    --wood-dark: #c9983f;
+    --grid: #5b4020;
+    --piece: #f6e3b4;
+    --piece-edge: #b8924a;
+    --promo: #b3261e;
+    --sel: rgba(47, 94, 143, 0.35);
+    --lastc: rgba(179, 38, 30, 0.18);
+    --accent: #2f5e8f;
+    --mincho: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+    --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { color-scheme: dark; --bg: #1c1814; --panel: #29231c; --ink: #f1e9dc; --dim: #b3a591; --accent: #8db4e2; }
+  }
+  :root[data-theme="dark"] { color-scheme: dark; --bg: #1c1814; --panel: #29231c; --ink: #f1e9dc; --dim: #b3a591; --accent: #8db4e2; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  main { max-width: 500px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 28px; display: flex; flex-direction: column; gap: 10px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  h1 { margin: 0; font-family: var(--mincho); font-size: 24px; font-weight: 800; letter-spacing: 0.1em; }
+  .rec { font-size: 12px; color: var(--dim); font-weight: 700; }
+  .opts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg { display: flex; background: var(--panel); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button { font: 700 12px var(--body); color: var(--dim); background: transparent; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+
+  .hand { display: flex; align-items: center; gap: 8px; min-height: 44px; background: var(--panel); border-radius: 10px; padding: 4px 8px; }
+  .hand .who { font-size: 12px; font-weight: 700; color: var(--dim); white-space: nowrap; }
+  .hand .who.turn { color: var(--accent); }
+  .hand .pcs { display: flex; flex-wrap: wrap; gap: 4px; }
+  .hp { position: relative; width: 34px; height: 38px; cursor: pointer; border-radius: 6px; }
+  .hp.sel { background: var(--sel); }
+  .hp .n { position: absolute; right: -3px; bottom: -2px; font: 900 11px var(--body); background: var(--ink); color: var(--panel); border-radius: 99px; min-width: 16px; height: 16px; display: grid; place-items: center; padding: 0 3px; z-index: 2; }
+
+  .ban { background: var(--wood); padding: 6px 18px 18px 6px; border-radius: 6px; position: relative; box-shadow: 0 8px 22px rgba(60, 40, 10, 0.25); }
+  .files, .ranks { position: absolute; display: flex; font: 600 10px var(--mincho); color: var(--grid); }
+  .files { top: -1px; left: 6px; right: 18px; height: 6px; }
+  .files span, .ranks span { flex: 1; display: grid; place-items: center; }
+  .ranks { right: 2px; top: 6px; bottom: 18px; width: 14px; flex-direction: column; }
+  .board { display: grid; grid-template-columns: repeat(9, 1fr); aspect-ratio: 1 / 1.05; width: 100%; max-width: 100%; border: 1.5px solid var(--grid); margin-top: 8px; touch-action: manipulation; position: relative; }
+  .sq { position: relative; border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); display: grid; place-items: center; cursor: pointer; }
+  .sq:nth-child(9n) { border-right: none; } .sq:nth-child(n+73) { border-bottom: none; }
+  .sq.last { background: var(--lastc); }
+  .sq.sel { background: var(--sel); }
+  .sq.tgt::after { content: ""; position: absolute; width: 26%; height: 26%; border-radius: 50%; background: rgba(47, 94, 143, 0.5); z-index: 3; }
+  .star { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--grid); transform: translate(-50%, -50%); z-index: 1; }
+
+  .koma {
+    position: relative; width: 88%; height: 92%; display: grid; place-items: center; z-index: 2;
+    clip-path: polygon(50% 0%, 86% 14%, 100% 100%, 0% 100%, 14% 14%);
+    background: linear-gradient(180deg, #f9ebc4, var(--piece)); filter: drop-shadow(0 1px 0 var(--piece-edge));
+    font-family: var(--mincho); font-weight: 800; color: #1a120a; font-size: clamp(15px, 5vw, 24px); line-height: 1; padding-top: 12%;
+    box-sizing: border-box;
+  }
+  .koma.two { font-size: clamp(9px, 2.9vw, 14px); writing-mode: vertical-rl; letter-spacing: -1px; }
+  .koma.pr { color: var(--promo); }
+  .koma.g { transform: rotate(180deg); }
+  .koma.king { font-size: clamp(16px, 5.4vw, 26px); }
+  .hp .koma { width: 100%; height: 100%; font-size: 18px; }
+
+  .status { text-align: center; font-weight: 700; font-size: 14px; min-height: 20px; color: var(--accent); }
+  .kifu { font: 600 12.5px var(--mincho); color: var(--dim); background: var(--panel); border-radius: 10px; padding: 8px 10px; max-height: 58px; overflow-y: auto; line-height: 1.7; }
+  .tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tools button { font: 700 14px var(--body); color: var(--ink); background: var(--panel); border: none; border-radius: 12px; padding: 12px 0; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:disabled { opacity: 0.4; }
+
+  .modal { position: fixed; inset: 0; z-index: 10; background: rgba(20, 14, 8, 0.55); display: grid; place-items: center; padding-inline: 16px; }
+  .card { background: var(--panel); border-radius: 18px; padding: 22px 18px; width: 100%; max-width: 320px; text-align: center; display: flex; flex-direction: column; gap: 12px; }
+  .card h2 { margin: 0; font-family: var(--mincho); font-size: 26px; font-weight: 800; }
+  .card p { margin: 0; color: var(--dim); font-size: 13px; line-height: 1.6; }
+  .card .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .card button { font: 700 15px var(--body); border: none; border-radius: 12px; padding: 12px; cursor: pointer; background: var(--bg); color: var(--ink); }
+  .card button.primary { background: var(--ink); color: var(--panel); }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>将棋盤</h1><span class="rec" id="rec"></span></header>
+  <div class="opts">
+    <div class="seg" id="lvSeg" role="group" aria-label="CPUの強さ"><button type="button" data-v="1">よわい</button><button type="button" data-v="2">ふつう</button><button type="button" data-v="3">つよい</button></div>
+    <div class="seg" id="colSeg" role="group" aria-label="手番"><button type="button" data-v="1">先手 ▲</button><button type="button" data-v="-1">後手 △</button></div>
+  </div>
+  <div class="hand" id="handTop"><span class="who" id="whoTop">CPU</span><div class="pcs"></div></div>
+  <div class="ban">
+    <div class="files" id="files"></div>
+    <div class="ranks" id="ranks"></div>
+    <div class="board" id="board"></div>
+  </div>
+  <div class="hand" id="handBot"><span class="who" id="whoBot">あなた</span><div class="pcs"></div></div>
+  <div class="status" id="status">あなたの番です</div>
+  <div class="kifu" id="kifu">―</div>
+  <div class="tools"><button type="button" id="undo">待った</button><button type="button" id="resign">投了</button><button type="button" id="newg">新しい対局</button></div>
+</main>
+
+<div class="modal" id="promo" hidden>
+  <div class="card"><h2>成りますか？</h2><div class="row"><button type="button" id="pNo">成らない</button><button type="button" class="primary" id="pYes">成る</button></div></div>
+</div>
+<div class="modal" id="over" hidden>
+  <div class="card"><h2 id="oTitle">勝ち</h2><p id="oSub"></p><button type="button" class="primary" id="oBtn">もう一局</button></div>
+</div>
+
+<script>
+// ===== ENGINE START =====
+const Shogi = (() => {
+  // piece codes: 1歩 2香 3桂 4銀 5金 6角 7飛 8玉, +8 = promoted; sign = owner (+先手 / -後手)
+  const P = 1, L = 2, N = 3, S = 4, G = 5, B = 6, R = 7, K = 8, PROMO = 8;
+  const NAMES = { 1: '歩', 2: '香', 3: '桂', 4: '銀', 5: '金', 6: '角', 7: '飛', 8: '玉', 9: 'と', 10: '成香', 11: '成桂', 12: '成銀', 14: '馬', 15: '龍' };
+  const SHORT = { 1: '歩', 2: '香', 3: '桂', 4: '銀', 5: '金', 6: '角', 7: '飛', 8: '玉', 9: 'と', 10: '杏', 11: '圭', 12: '全', 14: '馬', 15: '龍' };
+  const VAL = { 1: 90, 2: 315, 3: 405, 4: 495, 5: 540, 6: 855, 7: 990, 8: 0, 9: 540, 10: 540, 11: 540, 12: 540, 14: 945, 15: 1395 };
+  const HANDVAL = { 1: 100, 2: 350, 3: 450, 4: 550, 5: 600, 6: 950, 7: 1100 };
+  const GOLD = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0]];
+  const STEPS = {
+    1: [[-1, 0]], 3: [[-2, -1], [-2, 1]], 4: [[-1, -1], [-1, 0], [-1, 1], [1, -1], [1, 1]], 5: GOLD,
+    8: [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]],
+    9: GOLD, 10: GOLD, 11: GOLD, 12: GOLD, 14: [[-1, 0], [1, 0], [0, -1], [0, 1]], 15: [[-1, -1], [-1, 1], [1, -1], [1, 1]]
+  };
+  const SLIDES = { 2: [[-1, 0]], 6: [[-1, -1], [-1, 1], [1, -1], [1, 1]], 7: [[-1, 0], [1, 0], [0, -1], [0, 1]], 14: [[-1, -1], [-1, 1], [1, -1], [1, 1]], 15: [[-1, 0], [1, 0], [0, -1], [0, 1]] };
+  const canPromote = t => t >= 1 && t <= 7 && t !== G;
+
+  function start() {
+    const b = Array(81).fill(0);
+    const back = [L, N, S, G, K, G, S, N, L];
+    for (let c = 0; c < 9; c++) { b[c] = -back[c]; b[72 + c] = back[c]; b[18 + c] = -P; b[54 + c] = P; }
+    b[10] = -R; b[16] = -B; b[64] = B; b[70] = R;
+    return { b, hands: [[0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0]], turn: 1, ply: 0 };
+  }
+  const handOf = (s, side) => s.hands[side === 1 ? 0 : 1];
+  const inZone = (r, side) => side === 1 ? r <= 2 : r >= 6;
+  function mustPromote(t, r, side) {
+    const rr = side === 1 ? r : 8 - r;
+    return (t === P || t === L) && rr === 0 || t === N && rr <= 1;
+  }
+
+  function pseudo(s, side = s.turn) {
+    const { b } = s, out = [];
+    for (let i = 0; i < 81; i++) {
+      const v = b[i]; if (!v || Math.sign(v) !== side) continue;
+      const t = Math.abs(v), r = (i / 9) | 0, c = i % 9;
+      const push = (to) => {
+        const tr = (to / 9) | 0, cap = b[to];
+        if (canPromote(t) && (inZone(r, side) || inZone(tr, side))) {
+          out.push({ from: i, to, t, promo: true, cap });
+          if (!mustPromote(t, tr, side)) out.push({ from: i, to, t, promo: false, cap });
+        } else out.push({ from: i, to, t, promo: false, cap });
+      };
+      const st = STEPS[t];
+      if (st) for (const [dr, dc] of st) {
+        const rr = r + dr * side, cc = c + dc * side;
+        if (rr < 0 || rr > 8 || cc < 0 || cc > 8) continue;
+        const to = rr * 9 + cc; if (b[to] && Math.sign(b[to]) === side) continue;
+        push(to);
+      }
+      const sl = SLIDES[t];
+      if (sl) for (const [dr, dc] of sl) {
+        let rr = r + dr * side, cc = c + dc * side;
+        while (rr >= 0 && rr <= 8 && cc >= 0 && cc <= 8) {
+          const to = rr * 9 + cc;
+          if (b[to]) { if (Math.sign(b[to]) !== side) push(to); break; }
+          push(to); rr += dr * side; cc += dc * side;
+        }
+      }
+    }
+    // drops
+    const hand = handOf(s, side);
+    let pawnCols = null;
+    for (let t = 1; t <= 7; t++) {
+      if (!hand[t]) continue;
+      if (t === P) { pawnCols = Array(9).fill(false); for (let i = 0; i < 81; i++) if (b[i] === P * side) pawnCols[i % 9] = true; }
+      for (let i = 0; i < 81; i++) {
+        if (b[i]) continue;
+        const r = (i / 9) | 0;
+        if (mustPromote(t, r, side)) continue;
+        if (t === P && pawnCols[i % 9]) continue;
+        out.push({ from: -1, to: i, t, promo: false, cap: 0 });
+      }
+    }
+    return out;
+  }
+
+  function make(s, m) {
+    const b = s.b.slice(), side = s.turn;
+    const hands = [s.hands[0].slice(), s.hands[1].slice()];
+    const mine = hands[side === 1 ? 0 : 1];
+    if (m.from < 0) { mine[m.t]--; b[m.to] = m.t * side; }
+    else {
+      if (m.cap) { let ct = Math.abs(m.cap); if (ct > PROMO) ct -= PROMO; if (ct !== K) mine[ct]++; }
+      b[m.to] = (m.promo ? m.t + PROMO : m.t) * side; b[m.from] = 0;
+    }
+    return { b, hands, turn: -side, ply: s.ply + 1 };
+  }
+
+  function attacked(s, sq, by) {
+    // generate `by` pseudo moves without drops is expensive; do a direct scan instead
+    const { b } = s, r = (sq / 9) | 0, c = sq % 9;
+    for (let i = 0; i < 81; i++) {
+      const v = b[i]; if (!v || Math.sign(v) !== by) continue;
+      const t = Math.abs(v), pr = (i / 9) | 0, pc = i % 9;
+      const st = STEPS[t];
+      if (st) for (const [dr, dc] of st) if (pr + dr * by === r && pc + dc * by === c) return true;
+      const sl = SLIDES[t];
+      if (sl) for (const [dr, dc] of sl) {
+        let rr = pr + dr * by, cc = pc + dc * by;
+        while (rr >= 0 && rr <= 8 && cc >= 0 && cc <= 8) {
+          if (rr === r && cc === c) return true;
+          if (b[rr * 9 + cc]) break;
+          rr += dr * by; cc += dc * by;
+        }
+      }
+    }
+    return false;
+  }
+  const kingSq = (s, side) => s.b.indexOf(K * side);
+  const inCheck = (s, side = s.turn) => { const k = kingSq(s, side); return k >= 0 && attacked(s, k, -side); };
+
+  function legal(s) {
+    const side = s.turn, out = [];
+    for (const m of pseudo(s)) {
+      const n = make(s, m);
+      if (inCheck(n, side)) continue;
+      // 打ち歩詰め
+      if (m.from < 0 && m.t === P && inCheck(n, -side) && !hasLegal(n)) continue;
+      out.push(m);
+    }
+    return out;
+  }
+  function hasLegal(s) {
+    for (const m of pseudo(s)) if (!inCheck(make(s, m), s.turn)) return true;
+    return false;
+  }
+
+  // ---------- notation ----------
+  const ZEN = '０１２３４５６７８９', KAN = ['一', '二', '三', '四', '五', '六', '七', '八', '九'];
+  function kifu(s, m, prev, all) {
+    const side = s.turn, r = (m.to / 9) | 0, c = m.to % 9;
+    let t = (side === 1 ? '▲' : '△') + (prev && prev.to === m.to ? '同　' : ZEN[9 - c] + KAN[r]);
+    t += NAMES[m.t];
+    if (m.from < 0) { if (all.some(o => o.from >= 0 && o.to === m.to && o.t === m.t && !o.promo)) t += '打'; }
+    else if (canPromote(m.t) && m.t <= 7) {
+      const tr = r, fr = (m.from / 9) | 0;
+      if (m.promo) t += '成'; else if (inZone(tr, side) || inZone(fr, side)) t += '不成';
+    }
+    return t;
+  }
+
+  // ---------- search ----------
+  function evaluate(s) {
+    let e = 0;
+    const { b } = s;
+    for (let i = 0; i < 81; i++) {
+      const v = b[i]; if (!v) continue;
+      const t = Math.abs(v), side = Math.sign(v);
+      let x = VAL[t];
+      const r = (i / 9) | 0, adv = side === 1 ? 8 - r : r;
+      if (t === P || t === S || t === G) x += adv * 3;
+      e += x * side;
+    }
+    for (let t = 1; t <= 7; t++) e += (s.hands[0][t] - s.hands[1][t]) * HANDVAL[t];
+    // king shelter: own golds/silvers near the king
+    for (const side of [1, -1]) {
+      const k = kingSq(s, side); if (k < 0) { e -= side * 50000; continue; }
+      const kr = (k / 9) | 0, kc = k % 9;
+      let guard = 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        const rr = kr + dr, cc = kc + dc; if (rr < 0 || rr > 8 || cc < 0 || cc > 8) continue;
+        const v = b[rr * 9 + cc]; if (v && Math.sign(v) === side && [G, S, 9, 10, 11, 12].includes(Math.abs(v))) guard++;
+      }
+      e += side * guard * 25;
+    }
+    return e * s.turn;
+  }
+  const score = m => (m.cap ? VAL[Math.abs(m.cap)] * 10 - VAL[m.t] : 0) + (m.promo ? 400 : 0) - (m.from < 0 ? 50 : 0);
+  function quiesce(s, a, beta, d) {
+    const stand = evaluate(s);
+    if (stand >= beta) return beta;
+    if (a < stand) a = stand;
+    if (d >= 3) return a;
+    const caps = pseudo(s).filter(m => m.cap).sort((x, y) => score(y) - score(x));
+    for (const m of caps) {
+      if (Math.abs(m.cap) === K) return 90000;
+      const v = -quiesce(make(s, m), -beta, -a, d + 1);
+      if (v >= beta) return beta;
+      if (v > a) a = v;
+    }
+    return a;
+  }
+  let deadline = Infinity, tick = 0;
+  const TIMEOUT = {};
+  function search(s, depth, a, beta) {
+    if ((++tick & 255) === 0 && Date.now() > deadline) throw TIMEOUT;
+    if (depth <= 0) return quiesce(s, a, beta, 0);
+    const ms = pseudo(s).sort((x, y) => score(y) - score(x));
+    for (const m of ms) {
+      if (Math.abs(m.cap) === K) return 90000 + depth;
+      const v = -search(make(s, m), depth - 1, -beta, -a);
+      if (v >= beta) return beta;
+      if (v > a) a = v;
+    }
+    return a;
+  }
+  function rootSearch(s, ms, depth, noise) {
+    let bv = -Infinity, bm = ms[0];
+    const scored = [];
+    for (const m of ms) {
+      const v = -search(make(s, m), depth - 1, -Infinity, noise ? Infinity : -bv + 1);
+      scored.push([v, m]);
+      if (v > bv) { bv = v; bm = m; }
+    }
+    return { bm, bv, scored };
+  }
+  function best(s, level) {
+    let ms = legal(s);
+    if (!ms.length) return null;
+    ms.sort((x, y) => score(y) - score(x));
+    if (level === 1) {
+      deadline = Infinity;
+      const { scored } = rootSearch(s, ms, 1, true);
+      scored.forEach(x => x[0] += Math.random() * 120);
+      scored.sort((x, y) => y[0] - x[0]);
+      return scored[Math.min(scored.length - 1, Math.floor(Math.random() * 3))][1];
+    }
+    // iterative deepening with a time budget; keep the deepest completed result
+    const maxDepth = level === 2 ? 3 : 5, budget = level === 2 ? 1500 : 2500;
+    deadline = Date.now() + budget;
+    let result = ms[0];
+    for (let d = 1; d <= maxDepth; d++) {
+      try {
+        const { bm, scored } = rootSearch(s, ms, d, false);
+        result = bm;
+        // search the best move first next iteration
+        ms = scored.sort((x, y) => y[0] - x[0]).map(x => x[1]);
+        if (scored[0][0] > 80000) break;
+      } catch (e) { if (e !== TIMEOUT) throw e; break; }
+    }
+    deadline = Infinity;
+    return result;
+  }
+
+  function perft(s, d) { if (!d) return 1; let n = 0; for (const m of legal(s)) n += perft(make(s, m), d - 1); return n; }
+
+  return { start, legal, make, inCheck, kifu, best, perft, NAMES, SHORT, kingSq, PROMO, canPromote };
+})();
+// ===== ENGINE END =====
+
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+  const LVNAME = { 1: 'よわい', 2: 'ふつう', 3: 'つよい' };
+  let level = store.get('sg.level', 2), me = store.get('sg.side', 1);
+  const rec = store.get('sg.rec', {});
+  let s, hist, kif, sel = null, legalNow = [], last = null, busy = false, over = false, pendingPromo = null;
+
+  // board scaffolding
+  const boardEl = $('board'), sqs = [];
+  for (let k = 0; k < 81; k++) {
+    const d = document.createElement('div'); d.className = 'sq';
+    d.addEventListener('click', () => tapSq(+d.dataset.i));
+    boardEl.appendChild(d); sqs.push(d);
+  }
+  for (const [x, y] of [[33.33, 33.33], [66.66, 33.33], [33.33, 66.66], [66.66, 66.66]]) {
+    const st = document.createElement('div'); st.className = 'star'; st.style.left = x + '%'; st.style.top = y + '%'; boardEl.appendChild(st);
+  }
+  const KAN = ['一', '二', '三', '四', '五', '六', '七', '八', '九'];
+
+  function komaHTML(v, viewSide) {
+    const t = Math.abs(v), name = Shogi.SHORT[t];
+    let label = t === 8 ? (Math.sign(v) === 1 ? '玉' : '王') : name;
+    const two = label.length > 1;
+    const cls = ['koma']; if (t > Shogi.PROMO) cls.push('pr'); if (two) cls.push('two'); if (t === 8) cls.push('king');
+    if (Math.sign(v) !== viewSide) cls.push('g');
+    return `<div class="${cls.join(' ')}">${label}</div>`;
+  }
+
+  function render() {
+    const flip = me === -1;
+    $('files').innerHTML = [...Array(9)].map((_, k) => `<span>${flip ? k + 1 : 9 - k}</span>`).join('');
+    $('ranks').innerHTML = [...Array(9)].map((_, k) => `<span>${KAN[flip ? 8 - k : k]}</span>`).join('');
+    const targets = sel ? legalNow.filter(m => sel.from >= 0 ? m.from === sel.from : m.from < 0 && m.t === sel.t).map(m => m.to) : [];
+    for (let k = 0; k < 81; k++) {
+      const i = flip ? 80 - k : k, d = sqs[k];
+      d.dataset.i = i;
+      d.className = 'sq' + (last && last.to === i ? ' last' : '') + (sel && sel.from === i ? ' sel' : '') + (targets.includes(i) ? ' tgt' : '');
+      d.innerHTML = s.b[i] ? komaHTML(s.b[i], me) : '';
+    }
+    const handHTML = side => {
+      const h = s.hands[side === 1 ? 0 : 1];
+      let out = '';
+      for (let t = 7; t >= 1; t--) if (h[t]) {
+        const isSel = sel && sel.from < 0 && sel.t === t && side === me;
+        out += `<div class="hp ${isSel ? 'sel' : ''}" data-t="${t}" data-side="${side}">${komaHTML(t * side, me)}${h[t] > 1 ? `<span class="n">${h[t]}</span>` : ''}</div>`;
+      }
+      return out || '<span class="who" style="opacity:.5">なし</span>';
+    };
+    $('handBot').querySelector('.pcs').innerHTML = handHTML(me);
+    $('handTop').querySelector('.pcs').innerHTML = handHTML(-me);
+    $('whoBot').textContent = `あなた ${me === 1 ? '▲先手' : '△後手'}`;
+    $('whoTop').textContent = `CPU ${me === 1 ? '△後手' : '▲先手'}`;
+    $('whoBot').classList.toggle('turn', s.turn === me && !over);
+    $('whoTop').classList.toggle('turn', s.turn !== me && !over);
+    $('kifu').textContent = kif.length ? kif.map((k, n) => `${n + 1} ${k}`).join('　') : '―';
+    $('kifu').scrollTop = 1e6;
+    $('undo').disabled = busy || !hist.length || over;
+    $('resign').disabled = busy || over;
+    document.querySelectorAll('#lvSeg button').forEach(x => x.setAttribute('aria-pressed', +x.dataset.v === level));
+    document.querySelectorAll('#colSeg button').forEach(x => x.setAttribute('aria-pressed', +x.dataset.v === me));
+    const r = rec[level] || { w: 0, l: 0 };
+    $('rec').textContent = `vs ${LVNAME[level]}　${r.w}勝 ${r.l}敗`;
+  }
+  $('handBot').addEventListener('click', e => {
+    const hp = e.target.closest('.hp'); if (!hp || over || busy || s.turn !== me) return;
+    const t = +hp.dataset.t;
+    sel = sel && sel.from < 0 && sel.t === t ? null : { from: -1, t };
+    render();
+  });
+
+  function newGame() {
+    s = Shogi.start(); hist = []; kif = []; sel = null; last = null; over = false; busy = false;
+    $('over').hidden = true;
+    legalNow = Shogi.legal(s); render(); step();
+  }
+
+  function sfx() {
+    try {
+      const ac = sfx.ac || (sfx.ac = new (window.AudioContext || window.webkitAudioContext)());
+      const t = ac.currentTime, len = 0.06, buf = ac.createBuffer(1, ac.sampleRate * len, ac.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 6);
+      const src = ac.createBufferSource(), f = ac.createBiquadFilter(), v = ac.createGain();
+      f.type = 'bandpass'; f.frequency.value = 1400; v.gain.value = 0.9;
+      src.buffer = buf; src.connect(f).connect(v).connect(ac.destination); src.start(t);
+    } catch {}
+  }
+
+  function apply(m) {
+    hist.push({ s, kif: kif.slice(), last });
+    kif.push(Shogi.kifu(s, m, last, legalNow));
+    s = Shogi.make(s, m); last = m; sel = null;
+    legalNow = Shogi.legal(s);
+    sfx(); render();
+  }
+
+  function tapSq(i) {
+    if (over || busy || s.turn !== me) return;
+    if (sel) {
+      const ms = legalNow.filter(m => m.to === i && (sel.from >= 0 ? m.from === sel.from : m.from < 0 && m.t === sel.t));
+      if (ms.length === 2) { pendingPromo = ms; $('promo').hidden = false; return; }
+      if (ms.length === 1) { apply(ms[0]); return step(); }
+    }
+    const v = s.b[i];
+    sel = v && Math.sign(v) === me && legalNow.some(m => m.from === i) && !(sel && sel.from === i) ? { from: i } : null;
+    render();
+  }
+  $('pYes').addEventListener('click', () => { $('promo').hidden = true; apply(pendingPromo.find(m => m.promo)); step(); });
+  $('pNo').addEventListener('click', () => { $('promo').hidden = true; apply(pendingPromo.find(m => !m.promo)); step(); });
+
+  function step() {
+    const st = $('status');
+    if (!legalNow.length) return finish(s.turn === me ? 'lose' : 'win', '詰み');
+    if (s.turn === me) { st.textContent = Shogi.inCheck(s) ? '王手！ あなたの番です' : 'あなたの番です'; render(); return; }
+    st.textContent = 'CPU 考え中…'; busy = true; render();
+    setTimeout(() => {
+      const m = Shogi.best(s, level);
+      busy = false;
+      if (m) apply(m);
+      step();
+    }, 250);
+  }
+
+  function finish(res, why) {
+    over = true;
+    const r = rec[level] || { w: 0, l: 0 };
+    r[res === 'win' ? 'w' : 'l']++; rec[level] = r; store.set('sg.rec', rec);
+    $('status').textContent = `まで ${kif.length} 手で${res === 'win' ? 'あなた' : 'CPU'}の勝ち`;
+    $('oTitle').textContent = res === 'win' ? 'あなたの勝ち' : '負けました';
+    $('oSub').textContent = `${why}・${kif.length} 手　vs ${LVNAME[level]} 通算 ${r.w}勝 ${r.l}敗`;
+    render();
+    setTimeout(() => { $('over').hidden = false; }, 700);
+  }
+
+  $('undo').addEventListener('click', () => {
+    if (busy || !hist.length) return;
+    let h = hist.pop();
+    while (h.s.turn !== me && hist.length) h = hist.pop();
+    s = h.s; kif = h.kif; last = h.last; sel = null;
+    legalNow = Shogi.legal(s); render(); step();
+  });
+  $('resign').addEventListener('click', () => { if (!over && !busy) finish('lose', '投了'); });
+  $('newg').addEventListener('click', newGame);
+  $('oBtn').addEventListener('click', newGame);
+  $('lvSeg').addEventListener('click', e => { const v = e.target.dataset?.v; if (!v) return; level = +v; store.set('sg.level', level); render(); });
+  $('colSeg').addEventListener('click', e => { const v = e.target.dataset?.v; if (!v || busy) return; me = +v; store.set('sg.side', me); newGame(); });
+
+  newGame();
+})();
+</script>
+
+</body>
+</html>
