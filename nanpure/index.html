@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>ナンプレ帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<style>
+  :root {
+    --paper: #f2f5fa;
+    --sheet: #ffffff;
+    --ink: #1f2a44;
+    --ink-soft: #5d6a86;
+    --rule: #c9d2e3;
+    --rule-bold: #1f2a44;
+    --accent: #2d6cdf;
+    --accent-soft: #dfe9fb;
+    --peer: #eef2f9;
+    --same: #c9dafa;
+    --user: #2d6cdf;
+    --bad: #e0493c;
+    --bad-soft: #fde4e1;
+    --btn: #e6ebf4;
+    --digits: "Rubik", "Helvetica Neue", Arial, sans-serif;
+    --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #11151f; --sheet: #1a2030; --ink: #e8edf7; --ink-soft: #95a1bb;
+      --rule: #313a50; --rule-bold: #aab6d0; --accent: #7aa7ff; --accent-soft: #24345a;
+      --peer: #20283a; --same: #2c3f68; --user: #8fb4ff; --bad: #ff7a6b; --bad-soft: #4a2626; --btn: #252d40;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #11151f; --sheet: #1a2030; --ink: #e8edf7; --ink-soft: #95a1bb;
+    --rule: #313a50; --rule-bold: #aab6d0; --accent: #7aa7ff; --accent-soft: #24345a;
+    --peer: #20283a; --same: #2c3f68; --user: #8fb4ff; --bad: #ff7a6b; --bad-soft: #4a2626; --btn: #252d40;
+  }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font-family: var(--body);
+    -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
+  }
+  main {
+    max-width: 480px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 28px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 0.04em; }
+  .status { display: flex; gap: 14px; font-size: 13px; color: var(--ink-soft); font-weight: 700; }
+  .status b { font-family: var(--digits); font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; margin-left: 4px; }
+
+  .levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .levels button {
+    font: 700 13px var(--body); color: var(--ink-soft); background: transparent;
+    border: 1.5px solid var(--rule); border-radius: 10px; padding: 8px 0; cursor: pointer;
+  }
+  .levels button[aria-pressed="true"] { color: var(--sheet); background: var(--ink); border-color: var(--ink); }
+
+  .board {
+    display: grid; grid-template-columns: repeat(9, 1fr); aspect-ratio: 1; width: 100%; max-width: 100%;
+    background: var(--sheet); border: 2.5px solid var(--rule-bold); border-radius: 6px; overflow: hidden;
+    touch-action: manipulation;
+  }
+  .cell {
+    position: relative; display: grid; place-items: center; cursor: pointer;
+    border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    font-family: var(--digits); font-size: clamp(20px, 6.4vw, 30px); font-weight: 500; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .cell:nth-child(9n) { border-right: none; }
+  .cell:nth-child(9n+3), .cell:nth-child(9n+6) { border-right: 2px solid var(--rule-bold); }
+  .cell:nth-child(n+19):nth-child(-n+27), .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--rule-bold); }
+  .cell:nth-child(n+73) { border-bottom: none; }
+  .cell.peer { background: var(--peer); }
+  .cell.same { background: var(--same); }
+  .cell.sel { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+  .cell.given { color: var(--ink); font-weight: 600; }
+  .cell.user { color: var(--user); }
+  .cell.bad { color: var(--bad); background: var(--bad-soft); }
+  .cell.flash { animation: flash 0.5s ease-out; }
+  @keyframes flash { 0% { background: var(--same); } 100% { background: transparent; } }
+  .memo {
+    position: absolute; inset: 2px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+    font-size: clamp(8px, 2.4vw, 11px); color: var(--ink-soft); font-weight: 500;
+  }
+  .memo span { display: grid; place-items: center; }
+  .memo span.hl { color: var(--accent); font-weight: 600; }
+
+  .tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .tools button {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font: 700 11.5px var(--body); color: var(--ink-soft); background: transparent; border: none; cursor: pointer; padding: 4px 0;
+  }
+  .tools svg { width: 24px; height: 24px; stroke: var(--ink); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tools button[aria-pressed="true"] { color: var(--accent); }
+  .tools button[aria-pressed="true"] svg { stroke: var(--accent); }
+  .tools .pill { font-size: 10px; color: var(--sheet); background: var(--ink-soft); border-radius: 99px; padding: 0 6px; margin-left: 2px; }
+  .tools button[aria-pressed="true"] .pill { background: var(--accent); }
+
+  .pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
+  .pad button {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    aspect-ratio: 0.72; max-width: 100%; border: none; border-radius: 10px; background: var(--btn); color: var(--accent);
+    font: 500 clamp(22px, 6.8vw, 30px) var(--digits); cursor: pointer; padding: 0;
+  }
+  .pad button small { font: 500 10px var(--digits); color: var(--ink-soft); }
+  .pad button:disabled { opacity: 0.25; cursor: default; }
+  .pad.memo-mode button { color: var(--ink-soft); font-size: clamp(16px, 4.6vw, 20px); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .modal {
+    position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding-inline: 16px;
+    background: color-mix(in srgb, var(--paper) 70%, transparent); backdrop-filter: blur(3px);
+  }
+  .sheet {
+    width: 100%; max-width: 340px; background: var(--sheet); border: 1.5px solid var(--rule); border-radius: 18px;
+    padding: 24px 20px; display: flex; flex-direction: column; gap: 10px; text-align: center;
+    box-shadow: 0 20px 50px rgba(20, 30, 60, 0.18);
+  }
+  .sheet h2 { margin: 0; font-size: 26px; font-weight: 900; }
+  .sheet .time { font-family: var(--digits); font-size: 44px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .sheet p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
+  .sheet .rec { color: var(--accent); font-weight: 900; }
+  .sheet .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+  .sheet .actions button { font: 700 14px var(--body); border-radius: 12px; padding: 12px 0; cursor: pointer; border: 1.5px solid var(--rule); background: transparent; color: var(--ink); }
+  .sheet .actions button.primary { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+  @media (prefers-reduced-motion: reduce) { .cell.flash { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>ナンプレ帳</h1>
+    <div class="status">
+      <span>ミス<b id="miss">0</b></span>
+      <span>時間<b id="time">0:00</b></span>
+    </div>
+  </header>
+
+  <div class="levels" id="levels" role="group" aria-label="難易度"></div>
+
+  <div class="board" id="board" role="grid" aria-label="ナンプレ盤面"></div>
+
+  <div class="tools">
+    <button id="undo" type="button"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>戻す</button>
+    <button id="erase" type="button"><svg viewBox="0 0 24 24"><path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4l10-10a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L13 19"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>消す</button>
+    <button id="memo" type="button" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>メモ<span class="pill" id="memoPill">OFF</span></span></button>
+    <button id="hint" type="button"><svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2Z"/></svg>ヒント</button>
+  </div>
+
+  <div class="pad" id="pad"></div>
+</main>
+
+<div class="modal" id="done" hidden>
+  <div class="sheet">
+    <h2>クリア！</h2>
+    <div class="time" id="doneTime">4:32</div>
+    <p id="doneInfo">ふつう・ミス 0・ヒント 0</p>
+    <p class="rec" id="doneRec" hidden>自己ベスト更新</p>
+    <div class="actions">
+      <button id="doneClose" type="button">盤面を見る</button>
+      <button id="doneNext" class="primary" type="button">次の問題</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="confirmNew" hidden>
+  <div class="sheet">
+    <h2 style="font-size:20px">新しい問題にする？</h2>
+    <p>今の問題の途中経過は消えます。</p>
+    <div class="actions">
+      <button id="cnNo" type="button">続ける</button>
+      <button id="cnYes" class="primary" type="button">新しくする</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  const LEVELS = [
+    { id: 'easy', name: 'やさしい', givens: 40 },
+    { id: 'normal', name: 'ふつう', givens: 33 },
+    { id: 'hard', name: 'むずかしい', givens: 28 },
+    { id: 'oni', name: '鬼', givens: 24 }
+  ];
+
+  // ---------- generator / solver ----------
+  const ROW = i => Math.floor(i / 9), COL = i => i % 9, BOX = i => Math.floor(ROW(i) / 3) * 3 + Math.floor(COL(i) / 3);
+  const PEERS = Array.from({ length: 81 }, (_, i) => {
+    const s = new Set();
+    for (let j = 0; j < 81; j++) if (j !== i && (ROW(j) === ROW(i) || COL(j) === COL(i) || BOX(j) === BOX(i))) s.add(j);
+    return [...s];
+  });
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const bits = m => { const r = []; for (let d = 1; d <= 9; d++) if (m & (1 << d)) r.push(d); return r; };
+
+  // counts solutions up to `limit`; fills `out` with the first one found
+  function solve(grid, limit = 2, out = null, random = false) {
+    const g = grid.slice(), rows = Array(9).fill(0), cols = Array(9).fill(0), boxes = Array(9).fill(0);
+    for (let i = 0; i < 81; i++) if (g[i]) { const b = 1 << g[i]; rows[ROW(i)] |= b; cols[COL(i)] |= b; boxes[BOX(i)] |= b; }
+    let count = 0;
+    (function rec() {
+      if (count >= limit) return;
+      let best = -1, bestM = 0, bestN = 10;
+      for (let i = 0; i < 81; i++) if (!g[i]) {
+        const m = ~(rows[ROW(i)] | cols[COL(i)] | boxes[BOX(i)]) & 0x3fe;
+        let n = 0, x = m; while (x) { x &= x - 1; n++; }
+        if (n < bestN) { best = i; bestM = m; bestN = n; if (n <= 1) break; }
+      }
+      if (best < 0) { count++; if (out && count === 1) out.splice(0, 81, ...g); return; }
+      if (!bestN) return;
+      const ds = bits(bestM); if (random) shuffle(ds);
+      const r = ROW(best), c = COL(best), bx = BOX(best);
+      for (const d of ds) {
+        const b = 1 << d;
+        g[best] = d; rows[r] |= b; cols[c] |= b; boxes[bx] |= b;
+        rec();
+        g[best] = 0; rows[r] &= ~b; cols[c] &= ~b; boxes[bx] &= ~b;
+        if (count >= limit) return;
+      }
+    })();
+    return count;
+  }
+
+  function generate(givens) {
+    const sol = [];
+    solve(Array(81).fill(0), 1, sol, true);
+    const puz = sol.slice();
+    let left = 81;
+    // remove in symmetric pairs, keep uniqueness
+    const order = shuffle([...Array(41).keys()]);
+    for (const i of order) {
+      if (left <= givens) break;
+      const j = 80 - i;
+      const a = puz[i], b = puz[j];
+      puz[i] = 0; puz[j] = 0;
+      if (solve(puz, 2) !== 1) { puz[i] = a; puz[j] = b; }
+      else left -= i === j ? 1 : 2;
+    }
+    return { puz, sol };
+  }
+
+  // ---------- state ----------
+  let S = null;           // { level, puz, sol, vals, memos, miss, hints, time, done }
+  let sel = -1, memoMode = false, history = [];
+
+  function fresh(levelId) {
+    const lv = LEVELS.find(l => l.id === levelId) || LEVELS[1];
+    const { puz, sol } = generate(lv.givens);
+    S = { level: lv.id, puz, sol, vals: puz.slice(), memos: Array(81).fill(0), miss: 0, hints: 0, time: 0, done: false };
+    sel = -1; history = [];
+    save(); render();
+  }
+  function save() { store.set('np.state', S); store.set('np.level', S.level); }
+
+  // ---------- build DOM ----------
+  const board = $('board'), pad = $('pad');
+  const cells = [];
+  for (let i = 0; i < 81; i++) {
+    const d = document.createElement('div');
+    d.className = 'cell'; d.setAttribute('role', 'gridcell');
+    d.addEventListener('pointerdown', e => { e.preventDefault(); sel = i; render(); });
+    board.appendChild(d); cells.push(d);
+  }
+  const padBtns = [];
+  for (let d = 1; d <= 9; d++) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.innerHTML = `${d}<small></small>`;
+    b.addEventListener('click', () => input(d));
+    pad.appendChild(b); padBtns.push(b);
+  }
+  LEVELS.forEach(l => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = l.name; b.dataset.id = l.id;
+    b.addEventListener('click', () => askNew(l.id));
+    $('levels').appendChild(b);
+  });
+
+  // ---------- actions ----------
+  function push() { history.push({ i: sel, v: S.vals.slice(), m: S.memos.slice() }); if (history.length > 200) history.shift(); }
+
+  function input(d) {
+    if (!S || S.done || sel < 0 || S.puz[sel]) return;
+    if (memoMode) {
+      if (S.vals[sel]) return;
+      push(); S.memos[sel] ^= 1 << d;
+    } else {
+      if (S.vals[sel] === d) return;
+      push();
+      S.vals[sel] = d; S.memos[sel] = 0;
+      if (d !== S.sol[sel]) { S.miss++; try { navigator.vibrate && navigator.vibrate(30); } catch {} }
+      else {
+        for (const p of PEERS[sel]) S.memos[p] &= ~(1 << d);
+        flashDone(sel);
+      }
+    }
+    save(); render(); checkDone();
+  }
+
+  function erase() {
+    if (!S || S.done || sel < 0 || S.puz[sel]) return;
+    if (!S.vals[sel] && !S.memos[sel]) return;
+    push(); S.vals[sel] = 0; S.memos[sel] = 0; save(); render();
+  }
+  function undo() {
+    const h = history.pop(); if (!h || S.done) return;
+    S.vals = h.v; S.memos = h.m; sel = h.i; save(); render();
+  }
+  function hint() {
+    if (!S || S.done) return;
+    let i = sel;
+    if (i < 0 || S.vals[i] === S.sol[i]) {
+      // pick the empty cell with the fewest candidates
+      let best = -1, bn = 10;
+      for (let k = 0; k < 81; k++) if (S.vals[k] !== S.sol[k]) {
+        const used = new Set(PEERS[k].map(p => S.vals[p]).filter(v => v && v === S.sol[p]));
+        const n = 9 - used.size;
+        if (n < bn) { bn = n; best = k; }
+      }
+      i = best;
+    }
+    if (i < 0) return;
+    sel = i; push();
+    S.vals[i] = S.sol[i]; S.memos[i] = 0; S.hints++;
+    for (const p of PEERS[i]) S.memos[p] &= ~(1 << S.sol[i]);
+    save(); render(); flashDone(i); checkDone();
+  }
+
+  function flashDone(i) {
+    // flash a row/col/box that just got completed correctly
+    const groups = [[...Array(9)].map((_, k) => ROW(i) * 9 + k), [...Array(9)].map((_, k) => k * 9 + COL(i)),
+      [...Array(81).keys()].filter(k => BOX(k) === BOX(i))];
+    for (const gp of groups) if (gp.every(k => S.vals[k] === S.sol[k])) gp.forEach((k, n) => setTimeout(() => {
+      cells[k].classList.remove('flash'); void cells[k].offsetWidth; cells[k].classList.add('flash');
+    }, n * 25));
+  }
+
+  function checkDone() {
+    if (S.done || S.vals.some((v, i) => v !== S.sol[i])) return;
+    S.done = true; save();
+    const bests = store.get('np.best', {});
+    const lv = LEVELS.find(l => l.id === S.level);
+    const rec = !S.hints && (!bests[S.level] || S.time < bests[S.level]);
+    if (rec) { bests[S.level] = S.time; store.set('np.best', bests); }
+    $('doneTime').textContent = fmt(S.time);
+    $('doneInfo').textContent = `${lv.name}・ミス ${S.miss}・ヒント ${S.hints}` + (bests[S.level] && !rec ? `・ベスト ${fmt(bests[S.level])}` : '');
+    $('doneRec').hidden = !rec;
+    setTimeout(() => { $('done').hidden = false; }, 500);
+  }
+
+  let pendingLevel = null;
+  function askNew(id) {
+    const started = S && !S.done && S.vals.some((v, i) => v && !S.puz[i]);
+    if (!started) return fresh(id);
+    pendingLevel = id; $('confirmNew').hidden = false;
+  }
+  $('cnNo').addEventListener('click', () => { $('confirmNew').hidden = true; });
+  $('cnYes').addEventListener('click', () => { $('confirmNew').hidden = true; fresh(pendingLevel); });
+  $('doneClose').addEventListener('click', () => { $('done').hidden = true; });
+  $('doneNext').addEventListener('click', () => { $('done').hidden = true; fresh(S.level); });
+
+  $('undo').addEventListener('click', undo);
+  $('erase').addEventListener('click', erase);
+  $('hint').addEventListener('click', hint);
+  $('memo').addEventListener('click', () => { memoMode = !memoMode; render(); });
+
+  window.addEventListener('keydown', e => {
+    if (!$('done').hidden || !$('confirmNew').hidden) return;
+    if (/^[1-9]$/.test(e.key)) { input(+e.key); return; }
+    if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') { erase(); return; }
+    if (e.key === 'm' || e.key === 'M') { memoMode = !memoMode; render(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); return; }
+    const mv = { ArrowUp: -9, ArrowDown: 9, ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (mv) {
+      e.preventDefault();
+      if (sel < 0) sel = 40;
+      else {
+        const r = ROW(sel), c = COL(sel);
+        if (mv === -1 && c > 0 || mv === 1 && c < 8 || mv === -9 && r > 0 || mv === 9 && r < 8) sel += mv;
+      }
+      render();
+    }
+  });
+
+  // ---------- render ----------
+  const fmt = s => { s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return (h ? `${h}:${String(m).padStart(2, '0')}` : m) + ':' + String(x).padStart(2, '0'); };
+
+  function render() {
+    if (!S) return;
+    const sv = sel >= 0 ? S.vals[sel] : 0;
+    const counts = Array(10).fill(0);
+    S.vals.forEach((v, i) => { if (v && v === S.sol[i]) counts[v]++; });
+    for (let i = 0; i < 81; i++) {
+      const c = cells[i], v = S.vals[i];
+      let cls = 'cell';
+      if (sel >= 0 && i !== sel && (ROW(i) === ROW(sel) || COL(i) === COL(sel) || BOX(i) === BOX(sel))) cls += ' peer';
+      if (sv && v === sv && i !== sel) cls += ' same';
+      if (i === sel) cls += ' sel';
+      if (S.puz[i]) cls += ' given';
+      else if (v) cls += v === S.sol[i] ? ' user' : ' bad';
+      if (c.classList.contains('flash')) cls += ' flash';
+      c.className = cls;
+      if (v) { if (c.textContent !== String(v) || c.firstChild?.nodeType !== 3) c.textContent = v; }
+      else if (S.memos[i]) {
+        c.innerHTML = '<div class="memo">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d =>
+          `<span class="${sv === d ? 'hl' : ''}">${S.memos[i] & (1 << d) ? d : ''}</span>`).join('') + '</div>';
+      } else c.textContent = '';
+      c.setAttribute('aria-label', `${ROW(i) + 1}行${COL(i) + 1}列 ${v || '空き'}`);
+    }
+    padBtns.forEach((b, k) => {
+      const d = k + 1, left = 9 - counts[d];
+      b.disabled = left <= 0 && !memoMode;
+      b.querySelector('small').textContent = left > 0 ? left : '';
+    });
+    pad.classList.toggle('memo-mode', memoMode);
+    $('memo').setAttribute('aria-pressed', memoMode);
+    $('memoPill').textContent = memoMode ? 'ON' : 'OFF';
+    $('miss').textContent = S.miss;
+    $('time').textContent = fmt(S.time);
+    document.querySelectorAll('#levels button').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === S.level));
+  }
+
+  // ---------- timer ----------
+  let last = performance.now(), saveAcc = 0;
+  setInterval(() => {
+    const now = performance.now(), dt = (now - last) / 1000; last = now;
+    if (!S || S.done || document.hidden) return;
+    S.time += Math.min(dt, 2);
+    $('time').textContent = fmt(S.time);
+    if ((saveAcc += dt) > 5) { saveAcc = 0; save(); }
+  }, 500);
+  document.addEventListener('visibilitychange', () => { last = performance.now(); if (document.hidden && S) save(); });
+
+  // ---------- boot ----------
+  const saved = store.get('np.state', null);
+  if (saved && Array.isArray(saved.puz) && saved.puz.length === 81 && !saved.done) { S = saved; render(); }
+  else fresh(store.get('np.level', 'normal'));
+})();
+</script>
+
+</body>
+</html>
