@@ -1,0 +1,1398 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>戦国天下録</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #12100d; --panel: #1c1914; --card: #27221a; --card2: #312a20; --line: #3d3529;
+    --ink: #f2e8d2; --dim: #b1a386; --gold: #e2b54a; --red: #d65a45; --green: #6cbf7d;
+    --mincho: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+    --sans: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--sans);
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:disabled { opacity: .38; cursor: default; }
+  #app { position: fixed; inset: 0; display: flex; flex-direction: column; max-width: 720px; margin: 0 auto; background: var(--bg); }
+  #top { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .mon { width: 30px; height: 30px; border-radius: 50%; display: inline-grid; place-items: center; flex: none;
+    font-family: var(--mincho); font-weight: 800; color: #fff; font-size: 15px; line-height: 1;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.5); text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+  .mon.s { width: 22px; height: 22px; font-size: 12px; }
+  #top .cn { font-family: var(--mincho); font-weight: 800; font-size: 16px; line-height: 1.15; }
+  #top .dt { color: var(--dim); font-size: 12px; }
+  #top .res { margin-left: auto; display: flex; gap: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+  #top .res b { display: block; font-size: 14px; }
+  #top .res span { font-size: 10px; color: var(--dim); }
+  #mapwrap { position: relative; flex: 1; min-height: 0; background: #1b2d44; overflow: hidden; }
+  #map { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+  #zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  #zoom button { width: 38px; height: 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,.18); background: rgba(18,16,13,.78); font-size: 18px; }
+  #toast { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); max-width: calc(100% - 80px); pointer-events: none;
+    display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  #toast div { background: rgba(18,16,13,.9); border: 1px solid var(--line); border-radius: 12px; padding: 7px 12px; font-size: 13px; line-height: 1.5;
+    animation: tin .25s ease; text-align: center; }
+  @keyframes tin { from { opacity: 0; transform: translateY(-6px); } }
+  #panel { flex: none; max-height: 47%; overflow-y: auto; background: var(--panel); border-top: 1px solid var(--line);
+    padding: 12px 12px 0; overscroll-behavior: contain; }
+  .ph { display: flex; align-items: center; gap: 10px; }
+  .ph .pn { font-family: var(--mincho); font-weight: 800; font-size: 20px; line-height: 1.2; }
+  .ph .po { font-size: 12px; color: var(--dim); }
+  .ph .x { margin-left: auto; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0; }
+  .stats div { background: var(--card); border-radius: 10px; padding: 6px 8px; }
+  .stats span { display: block; font-size: 10.5px; color: var(--dim); }
+  .stats b { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .gens { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .gchip { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 5px 8px; font-size: 12.5px; line-height: 1.35; }
+  .gchip b { font-weight: 700; }
+  .gchip small { color: var(--dim); font-size: 10.5px; display: block; font-variant-numeric: tabular-nums; }
+  .gchip.done { opacity: .45; }
+  .gchip.dm b::before { content: "主 "; color: var(--gold); }
+  .cmds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 10px; }
+  .cmd { background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 4px 7px; text-align: center; }
+  .cmd b { display: block; font-family: var(--mincho); font-size: 16px; }
+  .cmd small { font-size: 10.5px; color: var(--dim); }
+  .cmd.war { border-color: #6b3328; background: #3a1f19; }
+  .note { font-size: 12.5px; color: var(--dim); line-height: 1.6; margin: 0 0 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+  .pchip { border: 1px solid var(--line); background: var(--card); border-radius: 99px; padding: 5px 11px; font-size: 13px; }
+  .pchip small { color: var(--gold); margin-left: 5px; font-variant-numeric: tabular-nums; }
+  .pchip.zero small { color: var(--dim); }
+  .sum .st { font-family: var(--mincho); font-weight: 800; font-size: 18px; }
+  .foot { position: sticky; bottom: 0; background: var(--panel); display: grid; grid-template-columns: 1fr 1fr 1fr 1.6fr; gap: 6px;
+    padding: 8px 0 calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); margin-top: 4px; }
+  .foot button { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 10px 2px; font-size: 13px; font-weight: 700; }
+  .foot .end { background: var(--gold); color: #231a08; border-color: var(--gold); font-family: var(--mincho); font-size: 15px; }
+  #modal { position: fixed; inset: 0; background: rgba(6,5,4,.62); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+  #modal[hidden] { display: none; }
+  .sheet { width: 100%; max-width: 560px; max-height: 88%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 20px 20px 0 0; padding: 16px 14px calc(16px + env(safe-area-inset-bottom)); animation: up .22s ease; }
+  @keyframes up { from { transform: translateY(24px); opacity: 0; } }
+  .sheet h3 { font-family: var(--mincho); font-weight: 800; font-size: 20px; margin: 0 0 4px; }
+  .sheet .sub { color: var(--dim); font-size: 12.5px; margin: 0 0 12px; line-height: 1.6; }
+  .list { display: flex; flex-direction: column; gap: 7px; }
+  .row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+  .row .grow { flex: 1; min-width: 0; }
+  .row small { display: block; color: var(--dim); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .row em { font-style: normal; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .btn { display: block; width: 100%; border: 0; border-radius: 14px; padding: 13px; font-weight: 700; font-size: 16px; background: var(--gold); color: #231a08;
+    font-family: var(--mincho); margin-top: 12px; }
+  .btn.ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); font-family: var(--sans); font-size: 14px; }
+  .btn.red { background: var(--red); color: #fff; }
+  .tog { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .tog button { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 6px 9px; font-size: 13px; text-align: left; }
+  .tog button small { display: block; color: var(--dim); font-size: 10.5px; }
+  .tog button.on { border-color: var(--gold); background: #3b3017; }
+  .lbl { font-size: 12px; color: var(--dim); margin: 6px 0; display: flex; justify-content: space-between; }
+  .lbl b { color: var(--ink); font-size: 15px; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--gold); }
+  .est { font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--card); margin-top: 8px; }
+  .est b.good { color: var(--green); } .est b.bad { color: var(--red); } .est b.mid { color: var(--gold); }
+  .bh { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .bh h3 { margin: 0; }
+  .bh span { color: var(--gold); font-family: var(--mincho); font-weight: 800; }
+  .bsides { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: stretch; }
+  .bs { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; min-width: 0; }
+  .bs.me { border-color: var(--gold); }
+  .bs .bn { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+  .bs .bl { font-size: 11px; color: var(--dim); margin: 4px 0 8px; line-height: 1.45; }
+  .bar { height: 9px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 99px; transition: width .5s ease; }
+  .bar.mor i { background: #e8d9a8; }
+  .bv { font-size: 12px; margin: 3px 0 7px; font-variant-numeric: tabular-nums; }
+  .bv b { font-size: 16px; }
+  .vs { align-self: center; font-family: var(--mincho); font-weight: 800; color: var(--dim); }
+  .blog { min-height: 58px; margin: 10px 0; padding: 8px 10px; border-radius: 12px; background: #15120e; border: 1px solid var(--line);
+    font-size: 13px; line-height: 1.6; }
+  .blog .hit { color: var(--gold); font-weight: 700; }
+  .tacs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .tacs button { border: 1px solid var(--line); background: var(--card2); border-radius: 12px; padding: 10px 2px 8px; }
+  .tacs button b { display: block; font-family: var(--mincho); font-size: 17px; }
+  .tacs button small { font-size: 9.5px; color: var(--dim); line-height: 1.3; display: block; }
+  .brow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+  .brow button { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 9px; font-size: 13px; }
+  .shake { animation: shk .3s; }
+  @keyframes shk { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  #title { position: fixed; inset: 0; z-index: 30; overflow-y: auto; background:
+    radial-gradient(120% 70% at 50% 0%, rgba(226,181,74,.18), transparent 60%), #12100d; }
+  #title .in { max-width: 520px; margin: 0 auto; padding: 48px 16px 40px; }
+  #title .eb { color: var(--gold); letter-spacing: .3em; font-size: 12px; font-weight: 700; }
+  #title h1 { font-family: var(--mincho); font-weight: 800; font-size: clamp(44px, 14vw, 68px); margin: 10px 0 8px; line-height: 1.05; letter-spacing: .04em; }
+  #title .lead { color: var(--dim); line-height: 1.8; font-size: 14.5px; margin: 0 0 22px; }
+  #title .how { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; font-size: 13px; line-height: 1.75; color: var(--dim); margin-top: 18px; }
+  #title .how b { color: var(--ink); }
+  .diff { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap; }
+  .diff.e { color: var(--green); border-color: #3b6a45; } .diff.h { color: var(--red); border-color: #6b3328; }
+  #busy { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; pointer-events: none; }
+  #busy span { background: rgba(18,16,13,.9); border: 1px solid var(--gold); color: var(--gold); border-radius: 99px; padding: 6px 14px; font-size: 13px; font-weight: 700; }
+  @media (prefers-reduced-motion: reduce) { .sheet, #toast div { animation: none; } .bar i { transition: none; } }
+</style>
+
+<div id="app">
+  <header id="top"></header>
+  <div id="mapwrap">
+    <canvas id="map"></canvas>
+    <div id="zoom"><button id="zin" aria-label="拡大">＋</button><button id="zout" aria-label="縮小">－</button><button id="zhome" aria-label="本拠地へ">◎</button></div>
+    <div id="toast"></div>
+    <div id="busy" hidden><span>諸国の大名が動いています…</span></div>
+  </div>
+  <section id="panel"></section>
+</div>
+<div id="modal" hidden></div>
+<div id="title"><div class="in" id="titlein"></div></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const R = Math.random;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const pick = a => a[Math.floor(R() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const SEASON = ['春', '夏', '秋', '冬'];
+const LS = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+const SAVE_KEY = 'sengoku.save.v1', BEST_KEY = 'sengoku.best';
+
+// ================= DATA =================
+// 国名, 経度, 緯度, 初期大名, 石高(万石), 商業, 城, 兵, 地図上の広さ
+const PD = `薩摩,130.45,31.62,島津,30,15,60,4000,48
+日向,131.35,32.25,伊東,25,12,40,2500,50
+肥後,130.8,32.65,大友,34,15,40,3000,46
+肥前,130.05,33.2,龍造寺,40,22,45,3500,46
+筑前,130.6,33.58,大友,35,30,45,3500,42
+豊後,131.45,33.1,大友,38,20,55,4500,46
+豊前,131.05,33.6,大友,20,12,35,2000,38
+周防,131.6,34.15,毛利,32,25,50,4000,46
+安芸,132.5,34.5,毛利,30,18,60,5000,44
+石見,132.2,34.9,毛利,15,25,35,2000,42
+出雲,132.85,35.3,尼子,20,18,70,5000,40
+備後,133.2,34.72,毛利,22,14,40,2500,40
+伯耆,133.55,35.35,尼子,15,10,40,2500,38
+備中,133.65,34.9,毛利,20,13,35,2000,36
+美作,134.0,35.1,尼子,18,10,35,2000,36
+備前,134.15,34.78,浦上,25,18,45,3000,36
+因幡,134.25,35.42,山名,13,10,30,1500,36
+播磨,134.72,34.95,赤松,36,25,45,3500,42
+但馬,134.8,35.45,山名,12,20,40,2000,36
+伊予,132.8,33.72,河野,36,15,40,3000,46
+土佐,133.35,33.4,長宗我部,20,10,40,3000,50
+讃岐,134.0,34.2,三好,22,18,35,2500,36
+阿波,134.3,33.9,三好,20,18,45,3500,40
+丹波,135.3,35.15,波多野,26,12,50,3000,38
+丹後,135.15,35.58,波多野,11,10,30,1500,32
+摂津,135.4,34.78,三好,35,40,55,5000,30
+山城,135.75,35.02,足利,22,50,40,2500,28
+河内,135.6,34.55,三好,40,30,40,3500,30
+大和,135.9,34.38,三好,45,20,50,3500,34
+紀伊,135.5,33.95,畠山,24,18,40,3000,46
+伊勢,136.45,34.6,北畠,50,30,45,4000,38
+近江,136.1,35.05,六角,50,35,60,5000,32
+北近江,136.3,35.45,浅井,27,18,55,3000,30
+若狭,135.8,35.5,朝倉,9,12,35,1500,30
+越前,136.2,35.92,朝倉,50,25,60,5500,40
+加賀,136.6,36.42,本願寺,35,15,50,5000,38
+能登,136.85,37.05,神保,21,12,60,2000,34
+越中,137.2,36.65,神保,38,14,40,3000,40
+飛騨,137.25,36.15,姉小路,4,6,35,1000,42
+美濃,136.8,35.5,斎藤,54,25,65,6000,40
+尾張,136.9,35.12,織田,57,40,45,5000,32
+三河,137.3,34.85,今川,29,15,40,3500,36
+遠江,137.85,34.8,今川,25,15,40,3500,38
+駿河,138.4,35.12,今川,15,30,55,5500,38
+甲斐,138.6,35.65,武田,23,15,50,5500,40
+南信濃,137.95,35.85,武田,25,10,45,4000,42
+北信濃,138.2,36.6,村上,16,8,45,2500,42
+越後,138.85,37.45,上杉,39,20,70,7000,56
+上野,139.0,36.45,長野,49,12,55,3500,42
+伊豆,138.95,34.88,北条,7,10,40,1500,30
+相模,139.3,35.4,北条,19,25,80,5500,34
+武蔵,139.55,35.9,北条,67,20,45,5500,42
+下野,139.85,36.62,宇都宮,37,10,40,3000,42
+常陸,140.3,36.4,佐竹,53,12,45,4000,44
+下総,140.2,35.82,里見,39,12,35,2500,38
+上総,140.15,35.3,里見,38,12,45,3000,38
+会津,139.8,37.45,蘆名,20,10,55,3000,46
+磐城,140.8,37.2,伊達,18,10,35,2000,44
+伊達,140.45,37.95,伊達,30,15,45,4000,44
+羽前,140.1,38.55,最上,25,10,40,3000,50
+陸前,141.0,38.65,大崎,35,10,35,2500,52
+羽後,140.3,39.6,安東,30,10,35,2500,60
+陸奥,141.2,40.2,南部,45,10,40,4000,70`;
+
+// "-" は陸路、"~" は海路
+const ADJ = `薩摩-日向 薩摩-肥後 日向-肥後 日向-豊後 肥後-肥前 肥後-筑前 肥後-豊後 肥前-筑前 筑前-豊前 筑前-豊後 豊後-豊前 豊前~周防 豊後~伊予
+周防-安芸 周防-石見 安芸-石見 安芸-備後 石見-出雲 石見-備後 出雲-伯耆 出雲-備後 伯耆-美作 伯耆-因幡 伯耆-備後 備後-備中 備中-美作 備中-備前
+美作-備前 美作-因幡 美作-播磨 備前-播磨 因幡-但馬 但馬-播磨 但馬-丹波 但馬-丹後 播磨-丹波 播磨-摂津 安芸~伊予 備中~讃岐 備前~讃岐
+伊予-土佐 伊予-讃岐 伊予-阿波 土佐-阿波 讃岐-阿波 阿波~紀伊 阿波~摂津
+丹波-丹後 丹波-摂津 丹波-山城 丹後-若狭 丹波-若狭 摂津-山城 摂津-河内 山城-河内 山城-大和 山城-近江 河内-大和 河内-紀伊 大和-紀伊 大和-伊勢 紀伊-伊勢
+伊勢-近江 伊勢-尾張 伊勢-美濃 近江-北近江 北近江-美濃 北近江-越前 北近江-若狭 若狭-越前 越前-加賀 越前-美濃 加賀-能登 加賀-越中 能登-越中 越中-飛騨 越中-越後
+飛騨-美濃 飛騨-南信濃 飛騨-北信濃 美濃-尾張 美濃-南信濃 尾張-三河 三河-遠江 三河-南信濃 遠江-駿河 遠江-南信濃 駿河-甲斐 駿河-伊豆 駿河-相模 甲斐-南信濃 甲斐-相模 甲斐-武蔵 南信濃-北信濃 北信濃-越後 北信濃-上野
+越後-上野 越後-会津 越後-羽前 上野-武蔵 上野-下野 伊豆-相模 相模-武蔵 武蔵-下総 武蔵-下野 下野-常陸 下野-会津 常陸-下総 常陸-磐城 下総-上総 相模~上総
+会津-伊達 会津-羽前 会津-磐城 伊達-磐城 伊達-羽前 伊達-陸前 羽前-陸前 羽前-羽後 陸前-陸奥 羽後-陸奥`;
+
+// 大名家: 名, 本拠, 家紋の字
+const CD = `島津,薩摩;伊東,日向,東;龍造寺,肥前;大友,豊後,友;毛利,安芸;尼子,出雲;浦上,備前;山名,但馬,名;赤松,播磨;河野,伊予;長宗我部,土佐,宗;三好,摂津;波多野,丹波;足利,山城;畠山,紀伊;北畠,伊勢;六角,近江;浅井,北近江;朝倉,越前;本願寺,加賀;神保,越中;姉小路,飛騨;斎藤,美濃;織田,尾張;今川,駿河;武田,甲斐;村上,北信濃;上杉,越後;長野,上野;北条,相模,条;宇都宮,下野;佐竹,常陸;里見,上総;蘆名,会津;伊達,伊達,達;最上,羽前;大崎,陸前,崎;安東,羽後;南部,陸奥`;
+
+// 武将: 名 統率 知略 政治 (先頭が当主)
+const GD = `島津:島津貴久 70 68 72,島津義久 78 85 85,島津義弘 98 75 55,島津歳久 80 82 60,島津家久 90 80 50
+伊東:伊東義祐 60 55 58,伊東祐安 55 45 40
+龍造寺:龍造寺隆信 85 70 60,鍋島直茂 82 88 85,成松信勝 75 40 30
+大友:大友義鎮 70 65 80,戸次鑑連 95 80 70,高橋鑑種 72 75 55,臼杵鑑速 74 70 72,吉弘鑑理 78 60 55
+毛利:毛利元就 90 100 92,吉川元春 96 62 50,小早川隆景 85 93 88,毛利隆元 60 65 80,口羽通良 60 70 70
+尼子:尼子晴久 80 70 70,山中幸盛 88 68 40,宇山久兼 55 60 72,立原久綱 62 72 65
+浦上:浦上宗景 68 70 60,宇喜多直家 75 95 80
+山名:山名祐豊 45 50 55,垣屋続成 50 45 48
+赤松:赤松義祐 40 45 50,別所安治 60 55 58
+河野:河野通宣 45 50 50,村上武吉 82 72 55
+長宗我部:長宗我部元親 88 85 80,吉良親貞 72 70 65,香宗我部親泰 70 75 70,福留親政 72 40 35
+三好:三好長慶 88 85 90,三好実休 80 65 60,安宅冬康 78 65 70,十河一存 90 50 40,松永久秀 75 95 88,三好長逸 65 60 65
+波多野:波多野元秀 62 60 60,赤井直正 85 68 50
+足利:足利義輝 80 72 55,細川藤孝 68 85 88,和田惟政 60 60 55
+畠山:畠山高政 55 45 45,鈴木重秀 85 75 40,湯川直春 60 55 50
+北畠:北畠具教 75 65 60,鳥屋尾満栄 45 70 72
+六角:六角義賢 70 70 65,蒲生賢秀 65 60 70,後藤賢豊 62 65 70
+浅井:浅井長政 80 72 75,磯野員昌 85 55 50,遠藤直経 70 70 55,赤尾清綱 68 62 60
+朝倉:朝倉義景 50 55 70,朝倉景紀 70 60 60,真柄直隆 80 30 25,山崎吉家 65 62 60
+本願寺:本願寺顕如 70 85 80,下間頼廉 75 70 65,杉浦玄任 68 55 45
+神保:神保長職 58 62 55,畠山義綱 45 55 62
+姉小路:姉小路良頼 45 50 52,三木自綱 55 62 45
+斎藤:斎藤義龍 80 72 70,稲葉良通 80 65 70,安藤守就 70 70 65,氏家直元 72 62 68,竹中重治 78 98 75
+織田:織田信長 95 92 95,柴田勝家 92 55 58,丹羽長秀 78 75 85,木下秀吉 78 95 95,前田利家 82 60 70,森可成 80 45 50
+今川:今川義元 80 85 90,松平元康 85 88 90,朝比奈泰朝 72 60 55,岡部元信 78 62 55,今川氏真 30 40 55
+武田:武田信玄 98 95 92,山本勘助 70 90 65,馬場信房 88 78 82,高坂昌信 85 80 75,山県昌景 93 60 55,真田幸隆 78 92 72,飯富虎昌 88 50 50
+村上:村上義清 85 55 55,楽岩寺光氏 55 45 40
+上杉:上杉謙信 100 80 60,柿崎景家 88 40 40,直江景綱 65 78 85,宇佐美定満 72 88 60,斎藤朝信 82 65 68,甘粕景持 78 50 52
+長野:長野業正 85 80 70,上泉信綱 80 60 45
+北条:北条氏康 90 88 95,北条綱成 90 55 55,北条氏政 65 62 75,北条氏照 72 65 65,北条幻庵 55 85 80,松田憲秀 55 55 72
+宇都宮:宇都宮広綱 50 55 58,芳賀高定 58 70 65
+佐竹:佐竹義昭 70 68 70,佐竹義重 88 80 72,真壁氏幹 80 40 35
+里見:里見義堯 78 72 70,里見義弘 75 60 62,正木時茂 88 50 45
+蘆名:蘆名盛氏 72 75 80,金上盛備 55 78 70
+伊達:伊達晴宗 62 60 68,伊達輝宗 60 72 75,鬼庭良直 60 65 72,遠藤基信 50 80 78
+最上:最上義守 50 55 55,最上義光 80 92 82,氏家守棟 58 72 68
+大崎:大崎義直 45 45 50,氏家吉継 55 50 48
+安東:安東愛季 72 75 72
+南部:南部晴政 75 62 65,石川高信 68 60 60,北信愛 62 70 68`;
+
+// 瀬戸内海・関門海峡を地図から切り出す線
+const CARVE = [[130.9, 33.9], [131.5, 33.85], [132.2, 33.98], [132.8, 34.1], [133.4, 34.3], [134.1, 34.45], [134.7, 34.6], [135.2, 34.6]];
+
+const LON0 = 129.5, LAT0 = 41.2, KX = 100, KY = 122;
+const W = 1260, H = 1250;
+const PROV = PD.trim().split('\n').map((l, i) => {
+  const f = l.split(',');
+  return { i, name: f[0], x: (+f[1] - LON0) * KX, y: (LAT0 - +f[2]) * KY, clan0: f[3], koku: +f[4], shou: +f[5], jo: +f[6], hei: +f[7], r: +f[8], adj: [], sea: [] };
+});
+const NP = PROV.length;
+const PIX = {}; PROV.forEach(p => PIX[p.name] = p.i);
+const EDGES = [];
+ADJ.trim().split(/\s+/).forEach(t => {
+  const sea = t.includes('~');
+  const [a, b] = t.split(/[-~]/).map(n => PIX[n]);
+  PROV[a].adj.push(b); PROV[b].adj.push(a);
+  if (sea) { PROV[a].sea.push(b); PROV[b].sea.push(a); }
+  EDGES.push([a, b, sea]);
+});
+const CLANS = CD.split(';').map(s => { const [name, cap, mon] = s.split(','); return { name, cap: PIX[cap], mon: mon || name[0], gens: [] }; });
+const CL = {}; CLANS.forEach((c, i) => { c.idx = i; CL[c.name] = c; });
+GD.trim().split('\n').forEach(l => {
+  const [cn, rest] = l.split(':');
+  CL[cn].gens = rest.split(',').map(g => { const [n, t, c, s] = g.trim().split(' '); return [n, +t, +c, +s]; });
+});
+const KYOTO = PIX['山城'];
+const WIN_PROVS = Math.ceil(NP * 2 / 3);
+
+// ---- 家の色 (隣り合う家が同じ色にならないように割り当て) ----
+const PAL = ['#d4a124', '#c0392b', '#2f62b3', '#2a8a57', '#7b4bb0', '#16939a', '#d8691f', '#b5397a', '#6f8a1f', '#4f86d6', '#98552a', '#44499a', '#c46a8a', '#3d9e6a', '#8c2f2f', '#5f6b7a', '#a88a2e', '#2e6f8f'];
+(() => {
+  const nb = CLANS.map(() => new Set());
+  EDGES.forEach(([a, b]) => { const ca = CL[PROV[a].clan0].idx, cb = CL[PROV[b].clan0].idx; if (ca !== cb) { nb[ca].add(cb); nb[cb].add(ca); } });
+  const pre = { 織田: 0, 武田: 1, 上杉: 2, 毛利: 3, 北条: 4, 今川: 5 };
+  const col = CLANS.map(c => pre[c.name] ?? -1);
+  const used = PAL.map(() => 0); col.forEach(c => { if (c >= 0) used[c]++; });
+  const order = CLANS.map(c => c.idx).filter(i => col[i] < 0)
+    .sort((a, b) => PROV.filter(p => p.clan0 === CLANS[b].name).length - PROV.filter(p => p.clan0 === CLANS[a].name).length);
+  for (const i of order) {
+    const bad = new Set([...nb[i]].map(j => col[j]));
+    let best = -1;
+    for (let k = 0; k < PAL.length; k++) if (!bad.has(k) && (best < 0 || used[k] < used[best])) best = k;
+    col[i] = best; used[best]++;
+  }
+  CLANS.forEach((c, i) => { c.color = PAL[col[i]]; c.rgb = [1, 3, 5].map(o => parseInt(c.color.substr(o, 2), 16)); });
+})();
+
+// ================= STATE =================
+let S = null;
+let sel = -1, busy = false;
+const provsOf = c => { const r = []; for (let i = 0; i < NP; i++) if (S.provs[i].owner === c) r.push(i); return r; };
+const gensIn = (pi, c) => S.gens.filter(g => g.prov === pi && (!c || g.clan === c));
+const availIn = pi => { const o = S.provs[pi].owner; return S.gens.filter(g => g.prov === pi && g.clan === o && !g.done); };
+const clanHei = c => provsOf(c).reduce((s, i) => s + S.provs[i].hei, 0);
+const allyKey = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+const allied = (a, b) => (S.ally[allyKey(a, b)] || 0) > 0;
+const lf = l => 0.6 + l * 0.008;
+const leadOf = gs => gs.length ? gs.reduce((m, g) => g.tou > m.tou ? g : m, gs[0]) : null;
+const defLead = pi => { const l = leadOf(gensIn(pi, S.provs[pi].owner)); return l ? l.tou : 30; };
+const genById = id => S.gens.find(g => g.id === id);
+const fmt = n => Math.round(n).toLocaleString('ja-JP');
+const capKoku = pi => Math.round(PROV[pi].koku * 1.6 + 15);
+const COST = { kai: 40, sho: 40, chiku: 50 };
+const devGain = (k, g) => k === 'chiku' ? Math.round(3 + g.sei / 12) : Math.round(1 + g.sei / 25);
+const recAmt = (g, pi) => Math.round((200 + S.provs[pi].koku * 15 + g.tou * 8) / 100) * 100;
+const recCost = amt => Math.ceil(amt / 25);
+
+function log(msg, mine) { S.log.unshift({ t: `${S.year}年${SEASON[S.season]}`, msg, mine: !!mine }); if (S.log.length > 80) S.log.length = 80; }
+
+function newGame(pc) {
+  S = { v: 1, year: 1560, season: 0, turn: 0, player: pc, provs: PROV.map(p => ({ owner: p.clan0, koku: p.koku, shou: p.shou, jo: p.jo, hei: p.hei })),
+    clans: {}, gens: [], ally: {}, log: [], nid: 0, won: false };
+  for (const c of CLANS) {
+    const ps = PROV.filter(p => p.clan0 === c.name);
+    S.clans[c.name] = { gold: 100 + ps.reduce((s, p) => s + p.shou, 0) * 4, rice: 1000 + ps.reduce((s, p) => s + p.koku, 0) * 60,
+      alive: true, daimyo: -1, aggr: 1.15 + R() * 0.35 };
+    const order = [c.cap, ...ps.map(p => p.i).filter(i => i !== c.cap)];
+    c.gens.forEach((g, k) => {
+      const id = S.nid++;
+      S.gens.push({ id, name: g[0], clan: c.name, prov: order[k % order.length], tou: g[1], chi: g[2], sei: g[3], done: false });
+      if (k === 0) S.clans[c.name].daimyo = id;
+    });
+  }
+  log(`${pc}家の天下取りが始まった。`, true);
+}
+
+// ================= MAP RASTER =================
+const RS = 0.7, RW = Math.ceil(W * RS), RH = Math.ceil(H * RS);
+let region = null, seaDist = null;
+const terr = document.createElement('canvas'); terr.width = RW; terr.height = RH;
+const tctx = terr.getContext('2d');
+const selC = document.createElement('canvas'); selC.width = RW; selC.height = RH;
+const sctx = selC.getContext('2d');
+let selDrawn = -2;
+
+function noise(x, y) {
+  return 6 * Math.sin(x * 0.045 + 1.3) * Math.cos(y * 0.052 - 0.7) + 4 * Math.sin((x + y) * 0.11) + 2.5 * Math.sin(x * 0.23 - y * 0.19);
+}
+function segD(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay; const l2 = dx * dx + dy * dy;
+  let t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const ex = ax + t * dx - px, ey = ay + t * dy - py; return Math.sqrt(ex * ex + ey * ey);
+}
+function buildRaster() {
+  region = new Int16Array(RW * RH);
+  const segs = EDGES.filter(e => !e[2]).map(([a, b]) => [PROV[a].x, PROV[a].y, PROV[b].x, PROV[b].y]);
+  const cv = CARVE.map(([lo, la]) => [(lo - LON0) * KX, (LAT0 - la) * KY]);
+  const cs = []; for (let k = 0; k < cv.length - 1; k++) cs.push([...cv[k], ...cv[k + 1]]);
+  for (let y = 0; y < RH; y++) {
+    const wy = (y + 0.5) / RS;
+    for (let x = 0; x < RW; x++) {
+      const wx = (x + 0.5) / RS;
+      let best = -1, bs = 1e9, nl = 1e9;
+      for (let i = 0; i < NP; i++) {
+        const p = PROV[i]; const dx = wx - p.x, dy = wy - p.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const e = d - p.r; if (e < nl) nl = e;
+        const s = d - p.r * 0.6; if (s < bs) { bs = s; best = i; }
+      }
+      const nz = noise(wx, wy);
+      let land = nl < nz;
+      if (!land && nl < 70) for (const s of segs) { if (segD(wx, wy, s[0], s[1], s[2], s[3]) < 17 + nz * 0.5) { land = true; break; } }
+      if (land) for (const s of cs) { if (segD(wx, wy, s[0], s[1], s[2], s[3]) < 12 + nz * 0.25) { land = false; break; } }
+      region[y * RW + x] = land ? best : -1;
+    }
+  }
+  // 海岸からの距離 (浅瀬の表現用)
+  seaDist = new Uint8Array(RW * RH).fill(255);
+  let q = [];
+  for (let k = 0; k < RW * RH; k++) if (region[k] >= 0) { seaDist[k] = 0; q.push(k); }
+  for (let d = 1; d <= 10 && q.length; d++) {
+    const nq = [];
+    for (const k of q) {
+      const x = k % RW;
+      const ns = [x > 0 ? k - 1 : -1, x < RW - 1 ? k + 1 : -1, k - RW, k + RW];
+      for (const n of ns) if (n >= 0 && n < RW * RH && seaDist[n] === 255) { seaDist[n] = d; nq.push(n); }
+    }
+    q = nq;
+  }
+}
+
+function recolor() {
+  const img = tctx.createImageData(RW, RH); const d = img.data;
+  const own = S.provs.map(p => CL[p.owner].idx);
+  const base = [234, 221, 190];
+  const cols = CLANS.map(c => c.rgb.map((v, j) => Math.round(base[j] * 0.48 + v * 0.52)));
+  const N = RW * RH;
+  for (let k = 0; k < N; k++) {
+    const r = region[k], x = k % RW, y = (k / RW) | 0, o = k * 4;
+    const h = (((x * 73856093) ^ (y * 19349663)) >>> 0) % 9 - 4;
+    if (r < 0) {
+      const sd = seaDist[k];
+      const t = sd < 10 ? (10 - sd) / 10 : 0;
+      const w = Math.sin(x * 0.09 + Math.sin(y * 0.05) * 2) > 0.93 ? 6 : 0;
+      d[o] = 26 + t * 26 + w; d[o + 1] = 44 + t * 36 + w; d[o + 2] = 68 + t * 40 + w; d[o + 3] = 255;
+      continue;
+    }
+    const c = cols[own[r]], oc = own[r];
+    let edge = 0;
+    const nbs = [x > 0 ? k - 1 : -1, x < RW - 1 ? k + 1 : -1, y > 0 ? k - RW : -1, y < RH - 1 ? k + RW : -1];
+    for (const n of nbs) {
+      const rn = n < 0 ? -1 : region[n];
+      if (rn < 0) { edge = 3; break; }
+      if (rn !== r) edge = Math.max(edge, own[rn] !== oc ? 2 : 1);
+    }
+    if (edge < 2) {
+      const n2 = [x > 1 ? k - 2 : -1, x < RW - 2 ? k + 2 : -1, y > 1 ? k - 2 * RW : -1, y < RH - 2 ? k + 2 * RW : -1];
+      for (const n of n2) { const rn = n < 0 ? -1 : region[n]; if (rn >= 0 && own[rn] !== oc) { edge = 2; break; } }
+    }
+    if (edge === 3) { d[o] = 92; d[o + 1] = 72; d[o + 2] = 48; }
+    else if (edge === 2) { d[o] = 58; d[o + 1] = 38; d[o + 2] = 24; }
+    else if (edge === 1) { d[o] = c[0] * 0.78; d[o + 1] = c[1] * 0.78; d[o + 2] = c[2] * 0.78; }
+    else { d[o] = c[0] + h; d[o + 1] = c[1] + h; d[o + 2] = c[2] + h; }
+    d[o + 3] = 255;
+  }
+  tctx.putImageData(img, 0, 0);
+  selDrawn = -2;
+}
+function drawSel() {
+  if (selDrawn === sel) return;
+  selDrawn = sel;
+  sctx.clearRect(0, 0, RW, RH);
+  if (sel < 0) return;
+  const img = sctx.createImageData(RW, RH); const d = img.data;
+  for (let k = 0; k < RW * RH; k++) {
+    if (region[k] !== sel) continue;
+    const x = k % RW;
+    const e = (x > 0 && region[k - 1] !== sel) || (x < RW - 1 && region[k + 1] !== sel) || region[k - RW] !== sel || region[k + RW] !== sel;
+    const o = k * 4;
+    if (e) { d[o] = 255; d[o + 1] = 214; d[o + 2] = 90; d[o + 3] = 255; }
+    else { d[o] = 255; d[o + 1] = 246; d[o + 2] = 214; d[o + 3] = 70; }
+  }
+  sctx.putImageData(img, 0, 0);
+}
+
+// ================= MAP VIEW =================
+const cv = $('#map'), ctx = cv.getContext('2d');
+let cw = 1, ch = 1, dpr = 1;
+const view = { x: 0, y: 0, z: 1 };
+let raf = 0;
+const req = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
+const minZ = () => Math.min(cw / W, ch / H) * 0.95;
+function resize() {
+  const r = cv.getBoundingClientRect();
+  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  cw = Math.max(1, r.width); ch = Math.max(1, r.height);
+  cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+  clampView(); req();
+}
+function clampView() {
+  view.z = clamp(view.z, minZ(), 2.6);
+  const vw = cw / view.z, vh = ch / view.z;
+  view.x = vw >= W ? (W - vw) / 2 : clamp(view.x, -40, W - vw + 40);
+  view.y = vh >= H ? (H - vh) / 2 : clamp(view.y, -40, H - vh + 40);
+}
+function centerOn(pi, z) {
+  if (z) view.z = z;
+  view.x = PROV[pi].x - cw / 2 / view.z; view.y = PROV[pi].y - ch / 2 / view.z; clampView(); req();
+}
+function zoomAt(f, sx, sy) {
+  const wx = view.x + sx / view.z, wy = view.y + sy / view.z;
+  view.z = clamp(view.z * f, minZ(), 2.6);
+  view.x = wx - sx / view.z; view.y = wy - sy / view.z; clampView(); req();
+}
+
+function draw() {
+  if (!S || !region) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#1a2c44'; ctx.fillRect(0, 0, cw, ch);
+  const z = view.z;
+  ctx.save();
+  ctx.translate(-view.x * z, -view.y * z); ctx.scale(z, z);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(terr, 0, 0, W, H);
+  drawSel();
+  if (sel >= 0) ctx.drawImage(selC, 0, 0, W, H);
+  // 海路
+  ctx.setLineDash([6 / z, 5 / z]); ctx.lineWidth = 1.4 / z; ctx.strokeStyle = 'rgba(190,215,240,.55)';
+  for (const [a, b, sea] of EDGES) if (sea) { ctx.beginPath(); ctx.moveTo(PROV[a].x, PROV[a].y); ctx.lineTo(PROV[b].x, PROV[b].y); ctx.stroke(); }
+  ctx.setLineDash([]);
+  // 選択中の国からの道
+  if (sel >= 0) {
+    const me = S.provs[sel].owner;
+    for (const j of PROV[sel].adj) {
+      const foe = S.provs[j].owner !== me;
+      ctx.strokeStyle = foe ? (allied(me, S.provs[j].owner) ? 'rgba(120,200,140,.9)' : 'rgba(214,70,50,.95)') : 'rgba(40,30,20,.6)';
+      ctx.lineWidth = (foe ? 3 : 2) / z;
+      ctx.beginPath(); ctx.moveTo(PROV[sel].x, PROV[sel].y); ctx.lineTo(PROV[j].x, PROV[j].y); ctx.stroke();
+    }
+  }
+  ctx.restore();
+  // 城アイコン
+  const rr = clamp(8 + 5 * z, 9, 15);
+  const showName = z >= 0.55, showHei = z >= 0.85;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < NP; i++) {
+    const p = PROV[i], sp = S.provs[i];
+    const sx = (p.x - view.x) * z, sy = (p.y - view.y) * z;
+    if (sx < -40 || sy < -40 || sx > cw + 40 || sy > ch + 40) continue;
+    const c = CL[sp.owner];
+    const mine = sp.owner === S.player;
+    if (i === sel) { ctx.beginPath(); ctx.arc(sx, sy, rr + 5, 0, 7); ctx.fillStyle = 'rgba(255,214,90,.35)'; ctx.fill(); }
+    ctx.beginPath(); ctx.arc(sx, sy, rr, 0, 7); ctx.fillStyle = c.color; ctx.fill();
+    ctx.lineWidth = mine ? 2.6 : 1.4; ctx.strokeStyle = mine ? '#ffd65a' : 'rgba(255,255,255,.85)'; ctx.stroke();
+    if (allied(S.player, sp.owner)) { ctx.beginPath(); ctx.arc(sx, sy, rr + 2.5, 0, 7); ctx.lineWidth = 1.5; ctx.strokeStyle = '#8fe0a0'; ctx.stroke(); }
+    ctx.fillStyle = '#fff'; ctx.font = `800 ${Math.round(rr * 1.05)}px "Shippori Mincho B1", serif`;
+    ctx.fillText(c.mon, sx, sy + 0.5);
+    if (showName) {
+      ctx.font = `700 ${z >= 1.2 ? 12 : 11}px "Zen Kaku Gothic New", sans-serif`;
+      const ty = sy + rr + 9;
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(245,236,214,.92)'; ctx.strokeText(p.name, sx, ty);
+      ctx.fillStyle = '#2a1d10'; ctx.fillText(p.name, sx, ty);
+      if (showHei) {
+        ctx.font = `700 10px "Zen Kaku Gothic New", sans-serif`;
+        const t = sp.hei >= 1000 ? (sp.hei / 1000).toFixed(1) + '千' : String(sp.hei);
+        ctx.strokeText(t, sx, ty + 12); ctx.fillStyle = sp.hei === 0 ? '#b3261e' : '#5a4630'; ctx.fillText(t, sx, ty + 12);
+      }
+    }
+  }
+}
+
+function hitProv(sx, sy) {
+  const wx = view.x + sx / view.z, wy = view.y + sy / view.z;
+  let best = -1, bd = 1e9;
+  for (let i = 0; i < NP; i++) { const d = Math.hypot(PROV[i].x - wx, PROV[i].y - wy); if (d < bd) { bd = d; best = i; } }
+  if (bd * view.z < 22) return best;
+  const x = Math.floor(wx * RS), y = Math.floor(wy * RS);
+  if (x >= 0 && y >= 0 && x < RW && y < RH) { const r = region[y * RW + x]; if (r >= 0) return r; }
+  return -1;
+}
+
+// pointer: drag to pan, pinch to zoom, tap to select
+const ptrs = new Map(); let drag = null, pinch = null, moved = false;
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1) { drag = { sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y }; moved = false; }
+  else if (ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()]; const r = cv.getBoundingClientRect();
+    const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: view.z, wx: view.x + mx / view.z, wy: view.y + my / view.z };
+    moved = true;
+  }
+});
+cv.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && ptrs.size >= 2) {
+    const [a, b] = [...ptrs.values()]; const r = cv.getBoundingClientRect();
+    const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+    view.z = clamp(pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d, minZ(), 2.6);
+    view.x = pinch.wx - mx / view.z; view.y = pinch.wy - my / view.z; clampView(); req();
+  } else if (drag) {
+    const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    if (Math.hypot(dx, dy) > 7) moved = true;
+    if (moved) { view.x = drag.vx - dx / view.z; view.y = drag.vy - dy / view.z; clampView(); req(); }
+  }
+});
+const pend = e => {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if (ptrs.size === 0) {
+    if (!moved && drag && e.type === 'pointerup') {
+      const r = cv.getBoundingClientRect();
+      const i = hitProv(e.clientX - r.left, e.clientY - r.top);
+      if (!busy) select(i === sel ? -1 : i);
+    }
+    drag = null; pinch = null;
+  } else if (ptrs.size === 1) {
+    const [p] = [...ptrs.values()]; drag = { sx: p.x, sy: p.y, vx: view.x, vy: view.y }; pinch = null;
+  }
+};
+cv.addEventListener('pointerup', pend); cv.addEventListener('pointercancel', pend);
+cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+$('#zin').onclick = () => zoomAt(1.3, cw / 2, ch / 2);
+$('#zout').onclick = () => zoomAt(1 / 1.3, cw / 2, ch / 2);
+$('#zhome').onclick = () => { const ps = provsOf(S.player); if (ps.length) centerOn(ps.includes(CL[S.player].cap) ? CL[S.player].cap : ps[0], 1.1); };
+
+function select(i) { sel = i; render(); req(); }
+
+// ================= SOUND =================
+let AC = null;
+function sfx(kind) {
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const t = AC.currentTime;
+    const tone = (f, dur, type, vol, f2, at = 0) => {
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t + at); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + at + dur);
+      g.gain.setValueAtTime(vol, t + at); g.gain.exponentialRampToValueAtTime(0.001, t + at + dur);
+      o.connect(g).connect(AC.destination); o.start(t + at); o.stop(t + at + dur + 0.02);
+    };
+    if (kind === 'don') { tone(110, 0.35, 'sine', 0.5, 45); tone(220, 0.08, 'triangle', 0.15, 90); }
+    else if (kind === 'win') { [392, 523, 659, 784].forEach((f, i) => tone(f, 0.35, 'triangle', 0.16, 0, i * 0.11)); }
+    else if (kind === 'lose') { [330, 262, 196].forEach((f, i) => tone(f, 0.4, 'sine', 0.18, 0, i * 0.16)); }
+    else if (kind === 'tap') tone(660, 0.06, 'triangle', 0.07);
+    else if (kind === 'coin') { tone(988, 0.08, 'square', 0.05); tone(1319, 0.14, 'square', 0.05, 0, 0.07); }
+  } catch (e) {}
+}
+const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+// ================= UI =================
+function toast(msg, ms = 2400) {
+  const el = document.createElement('div'); el.innerHTML = msg; $('#toast').appendChild(el);
+  setTimeout(() => el.remove(), ms);
+  while ($('#toast').children.length > 3) $('#toast').firstChild.remove();
+}
+const monHtml = (c, small) => `<span class="mon${small ? ' s' : ''}" style="background:${CL[c].color}">${CL[c].mon}</span>`;
+
+function renderTop() {
+  const pc = S.player, C = S.clans[pc];
+  const dm = genById(C.daimyo);
+  $('#top').innerHTML = `${monHtml(pc)}<div><div class="cn">${pc}家</div><div class="dt">${S.year}年 ${SEASON[S.season]}　当主 ${dm ? dm.name : '―'}</div></div>
+    <div class="res"><div><b>${fmt(C.gold)}</b><span>金</span></div><div><b>${fmt(C.rice)}</b><span>兵糧</span></div><div><b>${provsOf(pc).length}<small style="font-size:10px;color:var(--dim)">/${NP}</small></b><span>国</span></div></div>`;
+}
+
+const panel = $('#panel');
+let PH = {};
+function render() {
+  if (!S) return;
+  renderTop();
+  const pc = S.player, C = S.clans[pc];
+  let h = '';
+  PH = {
+    sel: d => { select(+d.i); centerOn(+d.i); },
+    close: () => select(-1),
+    cmd: d => openCmd(d.k),
+    dip: () => openDiplomacy(),
+    pow: () => openPower(),
+    log: () => openLog(),
+    auto: () => autoDomestic(),
+    end: () => endSeason(),
+    atkhere: () => openAttackFrom(sel),
+    ally: d => openAlly(d.c),
+  };
+  if (sel < 0) {
+    const mine = provsOf(pc);
+    const av = mine.reduce((s, i) => s + availIn(i).length, 0);
+    h += `<div class="sum"><div class="st">${S.year}年 ${SEASON[S.season]} ─ ${pc}家 評定</div>
+      <p class="note">国をタップして命令を出します。動ける武将 <b style="color:var(--gold)">${av}</b>人。${S.season === 1 ? '次の秋に兵糧が入ります。' : ''}</p></div>
+      <div class="chips">${mine.map(i => { const n = availIn(i).length; return `<button class="pchip${n ? '' : ' zero'}" data-a="sel" data-i="${i}">${PROV[i].name}<small>${n ? '●'.repeat(Math.min(n, 5)) : '―'}</small></button>`; }).join('')}</div>`;
+    if (S.log.length) h += `<p class="note" style="margin-top:-4px">📜 ${S.log[0].msg} <button class="pchip" data-a="log" style="padding:2px 9px;font-size:12px">記録</button></p>`;
+  } else {
+    const p = PROV[sel], sp = S.provs[sel], own = sp.owner, mine = own === pc;
+    const gens = gensIn(sel, own).sort((a, b) => (b.id === S.clans[own].daimyo) - (a.id === S.clans[own].daimyo) || b.tou - a.tou);
+    const al = !mine && allied(pc, own);
+    h += `<div class="ph">${monHtml(own)}<div><div class="pn">${p.name}</div><div class="po">${own}家${S.clans[own].daimyo >= 0 && genById(S.clans[own].daimyo) ? ' · 当主 ' + genById(S.clans[own].daimyo).name : ''}${al ? ' · <span style="color:var(--green)">同盟中</span>' : ''}</div></div><button class="x" data-a="close" aria-label="閉じる">✕</button></div>
+      <div class="stats"><div><span>兵</span><b>${fmt(sp.hei)}</b></div><div><span>石高</span><b>${sp.koku}</b><span>万石</span></div><div><span>商業</span><b>${sp.shou}</b></div><div><span>城</span><b>${sp.jo}</b></div></div>`;
+    h += `<div class="gens">${gens.length ? gens.map(g => `<div class="gchip${mine && g.done ? ' done' : ''}${g.id === S.clans[own].daimyo ? ' dm' : ''}"><b>${g.name}</b><small>統${g.tou} 智${g.chi} 政${g.sei}${mine && g.done ? ' · 済' : ''}</small></div>`).join('') : '<p class="note" style="margin:0">武将がいない国です。</p>'}</div>`;
+    if (mine) {
+      const av = availIn(sel), none = !av.length;
+      const bestSei = av.length ? Math.max(...av.map(g => g.sei)) : 0;
+      const bt = leadOf(av);
+      const hasFoe = p.adj.some(j => S.provs[j].owner !== pc);
+      const hasOwn = p.adj.some(j => S.provs[j].owner === pc);
+      h += `<div class="cmds">
+        <button class="cmd" data-a="cmd" data-k="kai" ${none || C.gold < COST.kai ? 'disabled' : ''}><b>開墾</b><small>石高+${av.length ? devGain('kai', { sei: bestSei }) : '-'} · ${COST.kai}金</small></button>
+        <button class="cmd" data-a="cmd" data-k="sho" ${none || C.gold < COST.sho ? 'disabled' : ''}><b>商業</b><small>商業+${av.length ? devGain('sho', { sei: bestSei }) : '-'} · ${COST.sho}金</small></button>
+        <button class="cmd" data-a="cmd" data-k="chiku" ${none || C.gold < COST.chiku ? 'disabled' : ''}><b>築城</b><small>城+${av.length ? devGain('chiku', { sei: bestSei }) : '-'} · ${COST.chiku}金</small></button>
+        <button class="cmd" data-a="cmd" data-k="chou" ${none ? 'disabled' : ''}><b>徴兵</b><small>${bt ? '+' + fmt(recAmt(bt, sel)) + '兵' : '―'}</small></button>
+        <button class="cmd war" data-a="cmd" data-k="atk" ${none || !hasFoe || sp.hei < 100 ? 'disabled' : ''}><b>出陣</b><small>隣国を攻める</small></button>
+        <button class="cmd" data-a="cmd" data-k="mov" ${none || !hasOwn ? 'disabled' : ''}><b>移動</b><small>武将・兵を送る</small></button>
+      </div>`;
+      if (none) h += `<p class="note">この国の武将は今季もう動けません。</p>`;
+    } else {
+      const srcs = p.adj.filter(j => S.provs[j].owner === pc && availIn(j).length && S.provs[j].hei >= 100);
+      if (al) h += `<p class="note">同盟中の家には攻め込めません（外交から破棄できます）。</p>`;
+      h += `<div class="cmds" style="grid-template-columns:1fr 1fr">
+        <button class="cmd war" data-a="atkhere" ${!srcs.length || al ? 'disabled' : ''}><b>ここへ出陣</b><small>${srcs.length ? '隣の自国から' : '隣接する自国がない'}</small></button>
+        <button class="cmd" data-a="ally" data-c="${own}"><b>外交</b><small>${al ? '同盟の状況' : '同盟を申し込む'}</small></button></div>`;
+    }
+  }
+  h += `<div class="foot"><button data-a="dip">外交</button><button data-a="pow">勢力</button><button data-a="auto">おまかせ<br>内政</button><button class="end" data-a="end">季節を進める ▶</button></div>`;
+  panel.innerHTML = h;
+}
+panel.addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b || b.disabled || busy) return;
+  sfx('tap'); PH[b.dataset.a] && PH[b.dataset.a](b.dataset);
+});
+
+// ---- modal ----
+const modal = $('#modal'); let MH = {};
+function openModal(html, handlers, dismiss = true) {
+  modal.innerHTML = `<div class="sheet">${html}</div>`; modal.hidden = false; MH = handlers || {}; modal.dataset.dismiss = dismiss ? '1' : '';
+  modal.querySelector('.sheet').scrollTop = 0;
+}
+function closeModal() { modal.hidden = true; modal.innerHTML = ''; MH = {}; }
+modal.addEventListener('click', e => {
+  if (e.target === modal) { if (modal.dataset.dismiss) closeModal(); return; }
+  const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+  if (b.dataset.a === 'x') { closeModal(); return; }
+  MH[b.dataset.a] && MH[b.dataset.a](b.dataset, b);
+});
+function ask(title, body, buttons) {
+  return new Promise(res => {
+    openModal(`<h3>${title}</h3><p class="sub">${body}</p>${buttons.map((b, i) => `<button class="btn ${b.cls || ''}" data-a="b" data-i="${i}">${b.label}</button>`).join('')}`,
+      { b: d => { closeModal(); res(buttons[+d.i].v); } }, false);
+  });
+}
+
+// ---- 内政・徴兵 ----
+function execDev(kind, g, pi) {
+  const sp = S.provs[pi], C = S.clans[g.clan];
+  if (kind === 'chou') {
+    const amt = recAmt(g, pi), cost = recCost(amt);
+    if (C.gold < cost) return null;
+    C.gold -= cost; sp.hei += amt; g.done = true; return `兵 +${fmt(amt)}`;
+  }
+  if (C.gold < COST[kind]) return null;
+  const gain = devGain(kind, g);
+  C.gold -= COST[kind]; g.done = true;
+  if (kind === 'kai') { const v = Math.min(capKoku(pi), sp.koku + gain); const dlt = v - sp.koku; sp.koku = v; return `石高 +${dlt}`; }
+  if (kind === 'sho') { const v = Math.min(120, sp.shou + gain); const dlt = v - sp.shou; sp.shou = v; return `商業 +${dlt}`; }
+  if (kind === 'chiku') { const v = Math.min(150, sp.jo + gain); const dlt = v - sp.jo; sp.jo = v; return `城 +${dlt}`; }
+}
+function openCmd(k) {
+  if (k === 'atk') return openAttack(sel);
+  if (k === 'mov') return openMove(sel);
+  const pi = sel, C = S.clans[S.player];
+  const names = { kai: '開墾', sho: '商業', chiku: '築城', chou: '徴兵' };
+  const descs = { kai: '田畑を広げて秋の収穫を増やします。政治が高いほど効果大。', sho: '町を栄えさせ、毎季の金収入を増やします。政治が高いほど効果大。',
+    chiku: '城を固め、守りの戦で受ける被害を減らします。', chou: '兵を集めます。石高と統率が高いほど多く集まります。' };
+  const av = availIn(pi).sort((a, b) => k === 'chou' ? b.tou - a.tou : b.sei - a.sei);
+  const rows = av.map(g => {
+    let gain, cost;
+    if (k === 'chou') { gain = '+' + fmt(recAmt(g, pi)) + '兵'; cost = recCost(recAmt(g, pi)); }
+    else { gain = '+' + devGain(k, g); cost = COST[k]; }
+    return `<button class="row" data-a="go" data-g="${g.id}" ${C.gold < cost ? 'disabled' : ''}><div class="grow"><b>${g.name}</b><small>${k === 'chou' ? '統率' + g.tou : '政治' + g.sei}</small></div><em>${gain}</em><small style="width:48px;text-align:right">${cost}金</small></button>`;
+  }).join('');
+  openModal(`<h3>${names[k]} ─ ${PROV[pi].name}</h3><p class="sub">${descs[k]}<br>担当する武将を選んでください。（所持金 ${fmt(C.gold)}）</p><div class="list">${rows}</div><button class="btn ghost" data-a="x">やめる</button>`, {
+    go: d => {
+      const g = genById(+d.g); const msg = execDev(k, g, pi);
+      closeModal(); if (msg) { sfx('coin'); toast(`${g.name}：${PROV[pi].name}の${msg}`); }
+      render(); req();
+    },
+  });
+}
+
+function autoDomestic() {
+  const pc = S.player, C = S.clans[pc]; let n = 0;
+  for (const pi of provsOf(pc)) {
+    const p = PROV[pi], sp = S.provs[pi];
+    const threat = p.adj.filter(j => S.provs[j].owner !== pc && !allied(pc, S.provs[j].owner)).reduce((s, j) => s + S.provs[j].hei, 0);
+    for (const g of availIn(pi).sort((a, b) => b.sei - a.sei)) {
+      let k;
+      const food = (clanHei(pc) + recAmt(g, pi)) * 0.4 <= provsOf(pc).reduce((s, i) => s + S.provs[i].koku, 0) * 100 * 1.1 + C.rice * 0.3;
+      if (threat > 0 && sp.hei < threat * 0.9 && food && C.gold >= recCost(recAmt(g, pi)) + 20) k = 'chou';
+      else if (threat > 0 && sp.jo < 60 && C.gold >= COST.chiku) k = 'chiku';
+      else if (C.gold >= COST.kai) k = sp.koku < capKoku(pi) && (sp.koku <= sp.shou * 1.4 || sp.shou >= 120) ? 'kai' : sp.shou < 120 ? 'sho' : sp.jo < 150 ? 'chiku' : null;
+      if (!k) continue;
+      if (execDev(k, g, pi)) n++;
+    }
+  }
+  if (n) { sfx('coin'); toast(`おまかせ内政：${n}件の命令を出しました`); }
+  else toast('動ける武将か資金が足りません');
+  render(); req();
+}
+
+// ---- 出陣 ----
+function estText(hei, lead, pi) {
+  const q = S.provs[pi];
+  if (q.hei <= 0) return `<b class="good">空き城</b> ─ 戦わずに奪えます`;
+  const r = hei * lf(lead) / (q.hei * (1 + q.jo / 100) * lf(defLead(pi)));
+  return r > 1.35 ? `<b class="good">優勢</b> ─ 押し切れそう` : r > 0.95 ? `<b class="mid">互角</b> ─ 采配しだい` : `<b class="bad">劣勢</b> ─ 城攻めは厳しい`;
+}
+function openAttackFrom(target) {
+  const pc = S.player;
+  const srcs = PROV[target].adj.filter(j => S.provs[j].owner === pc && availIn(j).length && S.provs[j].hei >= 100);
+  if (srcs.length === 1) return attackSetup(srcs[0], target);
+  openModal(`<h3>${PROV[target].name}へ出陣</h3><p class="sub">どの国から攻めますか？</p><div class="list">${srcs.map(j => `<button class="row" data-a="s" data-i="${j}"><div class="grow"><b>${PROV[j].name}</b><small>兵${fmt(S.provs[j].hei)} · 動ける武将${availIn(j).length}人</small></div></button>`).join('')}</div><button class="btn ghost" data-a="x">やめる</button>`,
+    { s: d => attackSetup(+d.i, target) });
+}
+function openAttack(from) {
+  const pc = S.player;
+  const tg = PROV[from].adj.filter(j => S.provs[j].owner !== pc);
+  openModal(`<h3>出陣 ─ ${PROV[from].name}から</h3><p class="sub">攻め込む国を選んでください。（手元の兵 ${fmt(S.provs[from].hei)}）</p><div class="list">${tg.map(j => {
+    const q = S.provs[j], al = allied(pc, q.owner);
+    return `<button class="row" data-a="t" data-i="${j}" ${al ? 'disabled' : ''}>${monHtml(q.owner, 1)}<div class="grow"><b>${PROV[j].name}</b><small>${q.owner}家 · 兵${fmt(q.hei)} · 城${q.jo}${al ? ' · 同盟中' : ''}${PROV[from].sea.includes(j) ? ' · 海路' : ''}</small></div></button>`;
+  }).join('')}</div><button class="btn ghost" data-a="x">やめる</button>`, { t: d => attackSetup(from, +d.i) });
+}
+function attackSetup(from, to) {
+  const av = availIn(from).sort((a, b) => b.tou - a.tou);
+  const chosen = new Set([av[0].id]);
+  const sp = S.provs[from], q = S.provs[to];
+  const dl = leadOf(gensIn(to, q.owner));
+  let hei = Math.max(100, Math.floor(sp.hei * 0.85 / 100) * 100);
+  openModal(`<h3>${PROV[to].name}へ出陣</h3>
+    <p class="sub">${monHtml(q.owner, 1)} ${q.owner}家　兵${fmt(q.hei)}・城${q.jo}　${dl ? '守将 ' + dl.name + '（統' + dl.tou + '）' : '守将なし'}</p>
+    <div class="lbl"><span>率いる武将（3人まで・統率の高い者が大将）</span></div>
+    <div class="tog" id="tg">${av.map(g => `<button data-a="g" data-g="${g.id}" class="${chosen.has(g.id) ? 'on' : ''}">${g.name}<small>統${g.tou} 智${g.chi}</small></button>`).join('')}</div>
+    <div class="lbl"><span>出陣する兵</span><b id="hv">${fmt(hei)}</b></div>
+    <input type="range" id="hr" min="100" max="${sp.hei}" step="100" value="${hei}">
+    <div class="lbl"><span>${PROV[from].name}に残る兵</span><span id="rv">${fmt(sp.hei - hei)}</span></div>
+    <div class="est" id="est"></div>
+    <button class="btn red" data-a="go">出陣！</button><button class="btn ghost" data-a="x">やめる</button>`, {
+    g: (d, b) => {
+      const id = +d.g;
+      if (chosen.has(id)) { if (chosen.size > 1) chosen.delete(id); }
+      else { if (chosen.size >= 3) return; chosen.add(id); }
+      b.classList.toggle('on', chosen.has(id)); upd();
+    },
+    go: async () => {
+      const gs = [...chosen].map(genById);
+      closeModal(); busy = true;
+      sel = -1; render();
+      await doAttack(S.player, from, to, gs, hei);
+      busy = false; afterPlayerAction();
+    },
+  });
+  const upd = () => {
+    const lead = Math.max(...[...chosen].map(id => genById(id).tou));
+    $('#hv').textContent = fmt(hei); $('#rv').textContent = fmt(sp.hei - hei);
+    $('#est').innerHTML = '見込み：' + estText(hei, lead, to);
+  };
+  $('#hr').oninput = e => { hei = +e.target.value; upd(); };
+  upd();
+}
+
+// ---- 移動 ----
+function openMove(from) {
+  const pc = S.player;
+  const ds = PROV[from].adj.filter(j => S.provs[j].owner === pc);
+  openModal(`<h3>移動 ─ ${PROV[from].name}から</h3><p class="sub">送り先を選んでください。</p><div class="list">${ds.map(j => `<button class="row" data-a="t" data-i="${j}"><div class="grow"><b>${PROV[j].name}</b><small>兵${fmt(S.provs[j].hei)} · 武将${gensIn(j, pc).length}人</small></div></button>`).join('')}</div><button class="btn ghost" data-a="x">やめる</button>`,
+    { t: d => moveSetup(from, +d.i) });
+}
+function moveSetup(from, to) {
+  const av = availIn(from).sort((a, b) => b.tou - a.tou);
+  const chosen = new Set();
+  const sp = S.provs[from];
+  let hei = Math.floor(sp.hei / 2 / 100) * 100;
+  openModal(`<h3>${PROV[from].name} → ${PROV[to].name}</h3>
+    <p class="sub">武将を選ばない場合は、兵だけを送ります（誰か1人がこの季節の手番を使います）。</p>
+    <div class="lbl"><span>移る武将</span></div>
+    <div class="tog">${av.map(g => `<button data-a="g" data-g="${g.id}">${g.name}<small>統${g.tou} 政${g.sei}</small></button>`).join('')}</div>
+    <div class="lbl"><span>送る兵</span><b id="hv">${fmt(hei)}</b></div>
+    <input type="range" id="hr" min="0" max="${sp.hei}" step="100" value="${hei}">
+    <button class="btn" data-a="go">移動する</button><button class="btn ghost" data-a="x">やめる</button>`, {
+    g: (d, b) => { const id = +d.g; chosen.has(id) ? chosen.delete(id) : chosen.add(id); b.classList.toggle('on', chosen.has(id)); },
+    go: () => {
+      if (!chosen.size && hei <= 0) return;
+      const gs = [...chosen].map(genById);
+      gs.forEach(g => { g.prov = to; g.done = true; });
+      if (!gs.length) av[av.length - 1].done = true;
+      sp.hei -= hei; S.provs[to].hei += hei;
+      closeModal(); toast(`${PROV[to].name}へ${gs.length ? gs.map(g => g.name).join('・') + 'と' : ''}兵${fmt(hei)}を送りました`);
+      render(); req();
+    },
+  });
+  $('#hr').oninput = e => { hei = +e.target.value; $('#hv').textContent = fmt(hei); };
+}
+
+// ---- 外交 ----
+function neighborsOf(c) {
+  const s = new Set();
+  for (const i of provsOf(c)) for (const j of PROV[i].adj) if (S.provs[j].owner !== c) s.add(S.provs[j].owner);
+  return s;
+}
+function openDiplomacy() {
+  const pc = S.player, nb = neighborsOf(pc);
+  const cs = Object.keys(S.clans).filter(c => c !== pc && S.clans[c].alive)
+    .sort((a, b) => (nb.has(b) - nb.has(a)) || provsOf(b).length - provsOf(a).length);
+  openModal(`<h3>外交</h3><p class="sub">同盟を結んだ家とは互いに攻め込みません（4年間）。隣接する家が先に並んでいます。</p><div class="list">${cs.map(c => {
+    const n = S.ally[allyKey(pc, c)] || 0;
+    return `<button class="row" data-a="c" data-c="${c}">${monHtml(c, 1)}<div class="grow"><b>${c}家</b><small>${provsOf(c).length}国 · 兵${fmt(clanHei(c))}${nb.has(c) ? ' · 隣接' : ''}</small></div>${n > 0 ? `<em style="color:var(--green)">同盟 残${Math.ceil(n / 4)}年</em>` : ''}</button>`;
+  }).join('')}</div><button class="btn ghost" data-a="x">閉じる</button>`, { c: d => openAlly(d.c) });
+}
+function envoy() {
+  let best = null;
+  for (const g of S.gens) if (g.clan === S.player && !g.done && (!best || g.chi > best.chi)) best = g;
+  return best;
+}
+function allyChance(c, gift, e) {
+  const pc = S.player, mp = clanHei(pc) + provsOf(pc).length * 800, tp = clanHei(c) + provsOf(c).length * 800;
+  let ch = 12 + (e ? e.chi * 0.35 : 0) + gift / 6 + (mp > tp ? 12 : -6) - (tp > mp * 2 ? 18 : 0);
+  return Math.round(clamp(ch, 5, 90));
+}
+function openAlly(c) {
+  const pc = S.player, key = allyKey(pc, c), n = S.ally[key] || 0, C = S.clans[pc];
+  if (n > 0) {
+    openModal(`<h3>${c}家との同盟</h3><p class="sub">同盟はあと${n}季（約${Math.ceil(n / 4)}年）続きます。破棄すると、すぐに攻め込めるようになります。</p>
+      <button class="btn red" data-a="brk">同盟を破棄する</button><button class="btn ghost" data-a="x">閉じる</button>`, {
+      brk: () => { delete S.ally[key]; log(`${c}家との同盟を破棄した。`, true); closeModal(); toast(`${c}家との同盟を破棄しました`); render(); req(); },
+    });
+    return;
+  }
+  const e = envoy();
+  let gift = Math.min(100, Math.floor(C.gold / 10) * 10);
+  openModal(`<h3>${c}家へ同盟の使者</h3>
+    <p class="sub">${e ? `使者：<b style="color:var(--ink)">${e.name}</b>（智${e.chi}）─ 家中で最も知略の高い、動ける武将が向かいます。` : '動ける武将がいません。'}</p>
+    <div class="lbl"><span>贈る金</span><b id="gv">${gift}</b></div>
+    <input type="range" id="gr" min="0" max="${Math.min(500, Math.floor(C.gold / 10) * 10)}" step="10" value="${gift}">
+    <div class="est">成功の見込み：<b class="mid" id="pc">${allyChance(c, gift, e)}%</b></div>
+    <button class="btn" data-a="go" ${e ? '' : 'disabled'}>使者を送る</button><button class="btn ghost" data-a="x">やめる</button>`, {
+    go: () => {
+      const p = allyChance(c, gift, e);
+      C.gold -= gift; e.done = true; closeModal();
+      if (R() * 100 < p) { S.ally[key] = 16; sfx('win'); log(`${c}家と同盟を結んだ。`, true); toast(`🤝 ${c}家との同盟が成立しました`); }
+      else { sfx('lose'); log(`${c}家への同盟の申し入れは断られた。`, true); toast(`${c}家に同盟を断られました`); }
+      render(); req();
+    },
+  });
+  const gr = $('#gr'); if (gr) gr.oninput = ev => { gift = +ev.target.value; $('#gv').textContent = gift; $('#pc').textContent = allyChance(c, gift, e) + '%'; };
+}
+function openPower() {
+  const cs = Object.keys(S.clans).filter(c => S.clans[c].alive).sort((a, b) => provsOf(b).length - provsOf(a).length || clanHei(b) - clanHei(a));
+  openModal(`<h3>諸国の勢力</h3><p class="sub">${cs.length}家が割拠しています。${WIN_PROVS}国以上と京（山城）を押さえれば天下統一です。</p><div class="list">${cs.map((c, i) => {
+    const d = genById(S.clans[c].daimyo);
+    return `<div class="row" style="${c === S.player ? 'border-color:var(--gold)' : ''}"><span style="width:18px;color:var(--dim);font-size:12px">${i + 1}</span>${monHtml(c, 1)}<div class="grow"><b>${c}家</b><small>${d ? d.name : ''} · 兵${fmt(clanHei(c))}${allied(S.player, c) ? ' · 同盟' : ''}${provsOf(c).includes(KYOTO) ? ' · 京' : ''}</small></div><em>${provsOf(c).length}国</em></div>`;
+  }).join('')}</div><button class="btn ghost" data-a="x">閉じる</button>`);
+}
+function openLog() {
+  openModal(`<h3>記録</h3><div class="list">${S.log.slice(0, 50).map(l => `<div class="row" style="padding:8px 12px;${l.mine ? 'border-color:#6a5a2c' : ''}"><div class="grow" style="font-size:13px">${l.msg}<small>${l.t}</small></div></div>`).join('')}</div><button class="btn ghost" data-a="x">閉じる</button>`);
+}
+
+// ================= BATTLE =================
+const TAC = ['突撃', '射撃', '守備', '計略'];
+const TAC_HINT = ['射撃に強い', '守備に強い', '突撃に強い', '知略で揺さぶる'];
+const BEAT = [1, 2, 0];
+const COUNTER = [2, 0, 1];
+const DEAL = [1.25, 1, 0.7, 0.45], TAKE = [1.15, 1, 0.72, 1];
+function mkSide(clan, gens, hei, jo) {
+  const L = leadOf(gens);
+  return { clan, gens, lead: L ? L.tou : 30, leadName: L ? L.name : '足軽大将', chi: gens.length ? Math.max(...gens.map(g => g.chi)) : 30, hei, init: Math.max(1, hei), morale: 100, jo };
+}
+function aiTac(me, last) {
+  if (last != null && last < 3 && R() < 0.3) return COUNTER[last];
+  const w = [30, 30, me.jo > 0 ? 32 : 24, me.chi >= 75 ? 16 : me.chi >= 55 ? 9 : 4];
+  let t = R() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < 4; i++) { t -= w[i]; if (t < 0) return i; }
+  return 0;
+}
+function roundCalc(A, D, ta, td) {
+  let ma = DEAL[ta], md = DEAL[td];
+  const notes = []; let moA = 0, moD = 0;
+  if (ta < 3 && td < 3) {
+    if (BEAT[ta] === td) { ma *= 1.6; md *= 0.6; notes.push(`攻め方の${TAC[ta]}が${TAC[td]}を打ち破った！`); }
+    else if (BEAT[td] === ta) { md *= 1.6; ma *= 0.6; notes.push(`守り方の${TAC[td]}が${TAC[ta]}を打ち破った！`); }
+    else notes.push('一進一退の攻防。');
+  }
+  if (ta === 3) {
+    if (R() < clamp(0.35 + (A.chi - D.chi) / 100, 0.1, 0.85)) { moD += 20; md *= 0.4; notes.push('攻め方の計略が決まり、守り方が混乱！'); }
+    else { moA += 8; md *= 1.2; notes.push('攻め方の計略は見破られた。'); }
+  }
+  if (td === 3) {
+    if (R() < clamp(0.35 + (D.chi - A.chi) / 100, 0.1, 0.85)) { moA += 20; ma *= 0.4; notes.push('守り方の計略が決まり、攻め方が混乱！'); }
+    else { moD += 8; ma *= 1.2; notes.push('守り方の計略は見破られた。'); }
+  }
+  let dD = Math.round(A.hei * 0.14 * lf(A.lead) * ma * TAKE[td] * (0.85 + R() * 0.3) / (1 + D.jo / 100));
+  let dA = Math.round(D.hei * 0.14 * lf(D.lead) * md * TAKE[ta] * (0.85 + R() * 0.3));
+  dD = Math.min(dD, D.hei); dA = Math.min(dA, A.hei);
+  D.hei -= dD; A.hei -= dA;
+  A.morale = Math.round(A.morale - dA / A.init * 120 - moA);
+  D.morale = Math.round(D.morale - dD / D.init * 120 - moD);
+  return { dA, dD, note: notes.join(' ') };
+}
+function outcome(A, D, round) {
+  const ao = A.hei <= 0 || A.morale <= 0, dO = D.hei <= 0 || D.morale <= 0;
+  if (dO && !ao) return 'A'; if (ao && !dO) return 'D';
+  if (ao && dO) return A.morale > D.morale ? 'A' : 'D';
+  return round >= 5 ? 'D' : null;
+}
+function battle(att, def) {
+  const A = mkSide(att.clan, att.gens, att.hei, 0);
+  const D = mkSide(def.clan, def.gens, def.hei, def.jo);
+  const pc = S.player;
+  if (att.clan !== pc && def.clan !== pc) {
+    let r = 0, o = null; let la = null, ld = null;
+    while (!o) { const ta = aiTac(A, ld), td = aiTac(D, la); roundCalc(A, D, ta, td); la = ta; ld = td; r++; o = outcome(A, D, r); }
+    return Promise.resolve({ win: o === 'A', aHei: Math.max(0, A.hei), dHei: Math.max(0, D.hei) });
+  }
+  return new Promise(resolve => {
+    const meA = att.clan === pc;
+    const me = meA ? A : D;
+    let round = 0, auto = false, lastMine = null, lastFoe = null, done = false;
+    const side = (s, isA) => `<div class="bs${s === me ? ' me' : ''}">
+      <div class="bn">${monHtml(s.clan, 1)}${s.clan}軍${s === me ? ' <small style="color:var(--gold)">自軍</small>' : ''}</div>
+      <div class="bl">大将 ${s.leadName}<br>統${s.lead} 智${s.chi}${isA ? '' : ` · 城${s.jo}`}</div>
+      <div class="bar"><i id="${isA ? 'a' : 'd'}h" style="width:100%;background:${CL[s.clan].color}"></i></div>
+      <div class="bv"><b id="${isA ? 'a' : 'd'}hv">${fmt(s.hei)}</b> 兵</div>
+      <div class="bar mor"><i id="${isA ? 'a' : 'd'}m" style="width:100%"></i></div>
+      <div class="bv">士気 <span id="${isA ? 'a' : 'd'}mv">100</span></div></div>`;
+    const days = ['一', '二', '三', '四', '五'];
+    openModal(`<div class="bh"><h3>${PROV[att.from].name} → ${PROV[def.prov].name}</h3><span id="bday">一日目</span></div>
+      <div class="bsides">${side(A, true)}<div class="vs">対</div>${side(D, false)}</div>
+      <div class="blog" id="blog">${meA ? '攻め方です。5日のうちに敵の兵か士気を尽きさせれば城を落とせます。' : `<b style="color:var(--red)">${A.clan}家が攻めてきた！</b> 5日守り切れば勝ちです。`}<br><small style="color:var(--dim)">突撃は射撃に、射撃は守備に、守備は突撃に強い。</small></div>
+      <div class="tacs" id="tacs">${TAC.map((t, i) => `<button data-a="t" data-i="${i}"><b>${t}</b><small>${TAC_HINT[i]}</small></button>`).join('')}</div>
+      <div class="brow"><button data-a="auto">自動で戦う</button>${meA ? '<button data-a="ret">退却する</button>' : '<button data-a="auto">（守りを任せる）</button>'}</div>`, {
+      t: d => { if (!auto) play(+d.i); },
+      auto: () => { if (!auto) { auto = true; runAuto(); } },
+      ret: () => { if (!done) finish('D', true); },
+    }, false);
+    const upd = () => {
+      $('#ah').style.width = (A.hei / A.init * 100) + '%'; $('#dh').style.width = (D.hei / D.init * 100) + '%';
+      $('#am').style.width = clamp(A.morale, 0, 100) + '%'; $('#dm').style.width = clamp(D.morale, 0, 100) + '%';
+      $('#ahv').textContent = fmt(A.hei); $('#dhv').textContent = fmt(D.hei);
+      $('#amv').textContent = Math.max(0, A.morale); $('#dmv').textContent = Math.max(0, D.morale);
+    };
+    const play = mine => {
+      if (done) return;
+      const foe = aiTac(meA ? D : A, lastMine);
+      const ta = meA ? mine : foe, td = meA ? foe : mine;
+      const res = roundCalc(A, D, ta, td);
+      lastMine = mine; lastFoe = foe; round++;
+      sfx('don'); buzz(25);
+      const my = meA ? res.dA : res.dD, their = meA ? res.dD : res.dA;
+      $('#blog').innerHTML = `<b>${days[round - 1]}日目</b>　自軍「${TAC[mine]}」／敵「${TAC[foe]}」<br><span class="hit">${res.note}</span><br>自軍 −${fmt(my)}　敵 −${fmt(their)}`;
+      const sheet = modal.querySelector('.sheet'); sheet.classList.remove('shake'); void sheet.offsetWidth; sheet.classList.add('shake');
+      upd();
+      const o = outcome(A, D, round);
+      if (o) finish(o, false);
+      else $('#bday').textContent = days[round] + '日目';
+    };
+    const runAuto = async () => {
+      $('#tacs').style.opacity = .4;
+      while (!done) { await sleep(650); if (done) break; play(aiTac(me, lastFoe)); }
+    };
+    const finish = (o, retreat) => {
+      done = true;
+      const myWin = (o === 'A') === meA;
+      sfx(myWin ? 'win' : 'lose'); buzz(myWin ? [30, 40, 30] : 120);
+      const tname = PROV[def.prov].name;
+      const head = meA ? (myWin ? `勝利！ ${tname}を攻め落とした` : retreat ? '兵を退いた' : `敗北… ${tname}を落とせなかった`)
+        : (myWin ? `${tname}を守り抜いた！` : `落城… ${tname}を奪われた`);
+      $('#tacs').outerHTML = `<div class="blog" style="text-align:center;font-family:var(--mincho);font-size:20px;font-weight:800;color:${myWin ? 'var(--gold)' : 'var(--red)'}">${head}</div>`;
+      modal.querySelector('.brow').outerHTML = `<button class="btn" data-a="ok">続ける</button>`;
+      MH.ok = () => { closeModal(); resolve({ win: o === 'A', aHei: Math.max(0, A.hei), dHei: Math.max(0, D.hei) }); };
+    };
+    upd();
+  });
+}
+
+// 出陣の処理（プレイヤー・CPU共通）
+async function doAttack(clan, from, to, gens, hei) {
+  const sp = S.provs[from], q = S.provs[to], defClan = q.owner, pc = S.player;
+  sp.hei -= hei; gens.forEach(g => { g.done = true; });
+  const defGens = gensIn(to, defClan);
+  let res;
+  if (q.hei <= 0) {
+    res = { win: true, aHei: hei, dHei: 0 };
+    if (clan === pc) toast(`${PROV[to].name}は空き城だった。戦わずに占領！`);
+    if (defClan === pc) { centerOn(to); await ask(`${PROV[to].name}を奪われた`, `守る兵がいない${PROV[to].name}に${clan}家が攻め込み、城は明け渡された。`, [{ label: '続ける', v: 1 }]); }
+  } else {
+    if (defClan === pc) { centerOn(to); req(); await sleep(250); }
+    res = await battle({ clan, from, gens, hei }, { clan: defClan, prov: to, gens: defGens, hei: q.hei, jo: q.jo });
+  }
+  if (res.win) {
+    q.owner = clan; q.hei = res.aHei; q.jo = Math.max(15, Math.round(q.jo * 0.8));
+    gens.forEach(g => { g.prov = to; });
+    const captured = [];
+    for (const g of defGens) {
+      const flee = PROV[to].adj.filter(j => S.provs[j].owner === defClan);
+      if (flee.length && R() < 0.55) g.prov = pick(flee); else captured.push(g);
+    }
+    log(`${clan}家が${defClan}家の${PROV[to].name}を攻略。`, clan === pc || defClan === pc);
+    recolor(); req();
+    if (!provsOf(defClan).length) destroyClan(defClan, clan, captured);
+    await handleCaptives(clan, defClan, captured);
+  } else {
+    q.hei = res.dHei; q.jo = Math.max(10, q.jo - 4);
+    if (S.provs[from].owner === clan) sp.hei += res.aHei;
+    else {
+      const back = PROV[from].adj.filter(j => S.provs[j].owner === clan);
+      if (back.length) { const b = pick(back); S.provs[b].hei += res.aHei; gens.forEach(g => { g.prov = b; }); }
+    }
+    if (clan === pc || defClan === pc) log(`${clan}家の${PROV[to].name}攻めは失敗に終わった。`, true);
+  }
+}
+
+function destroyClan(c, by, captured) {
+  const C = S.clans[c]; C.alive = false;
+  for (const g of S.gens) if (g.clan === c && !captured.includes(g)) captured.push(g);
+  for (const k of Object.keys(S.ally)) if (k.split('|').includes(c)) delete S.ally[k];
+  log(`${c}家、滅亡。`, true);
+  if (c !== S.player) toast(`⚔ ${c}家が${by}家に滅ぼされた`, 3000);
+}
+function succession(c) {
+  const C = S.clans[c]; if (!C.alive) return;
+  const d = genById(C.daimyo);
+  if (d && d.clan === c) return;
+  const cand = S.gens.filter(g => g.clan === c).sort((a, b) => (b.tou + b.chi + b.sei) - (a.tou + a.chi + a.sei));
+  let nd = cand[0];
+  if (!nd) {
+    const ps = provsOf(c);
+    nd = { id: S.nid++, name: c + pick(['義', '信', '政', '晴', '元', '氏', '景', '長', '高', '忠']) + pick(['康', '光', '興', '久', '直', '綱', '重', '成', '勝', '秀']),
+      clan: c, prov: ps[0], tou: 45 + Math.floor(R() * 30), chi: 45 + Math.floor(R() * 30), sei: 45 + Math.floor(R() * 30), done: true };
+    S.gens.push(nd);
+  }
+  C.daimyo = nd.id;
+  log(`${c}家の家督を${nd.name}が継いだ。`, c === S.player);
+  if (c === S.player) toast(`${nd.name}が家督を継ぎました`, 3000);
+}
+function releaseTo(g) {
+  const ps = provsOf(g.clan);
+  if (!ps.length || !S.clans[g.clan].alive) { S.gens = S.gens.filter(x => x !== g); return; }
+  g.prov = ps.includes(CL[g.clan].cap) ? CL[g.clan].cap : pick(ps); g.done = true;
+}
+function removeGen(g) { S.gens = S.gens.filter(x => x !== g); }
+
+async function handleCaptives(winner, loser, caps) {
+  if (!caps.length) return;
+  const pc = S.player;
+  if (winner === pc) {
+    for (const g of caps) {
+      const isD = S.clans[g.clan].daimyo === g.id && S.clans[g.clan].alive;
+      const p = isD ? 0 : S.clans[g.clan].alive ? 55 : 70;
+      const v = await ask(`捕虜：${g.name}`, `${g.clan}家の${isD ? '当主' : '武将'}（統${g.tou} 智${g.chi} 政${g.sei}）を捕らえた。${isD ? '当主は決して降らないだろう。' : `登用の見込み ${p}%`}`, [
+        { label: '登用する', v: 'hire', cls: isD ? 'ghost' : '' }, { label: '解放する', v: 'free', cls: 'ghost' }, { label: '処断する', v: 'kill', cls: 'red' }]);
+      const oc = g.clan;
+      if (v === 'hire') {
+        if (R() * 100 < p) { g.clan = pc; g.done = true; log(`${g.name}が${pc}家に仕えた。`, true); toast(`${g.name}が家臣になった！`); sfx('win'); }
+        else { toast(`${g.name}は登用を拒み、去っていった`); releaseTo(g); }
+      } else if (v === 'free') releaseTo(g);
+      else { removeGen(g); log(`${g.name}を処断した。`, true); }
+      if (isD && v !== 'free') succession(oc);
+    }
+    return;
+  }
+  for (const g of caps) {
+    const isD = S.clans[g.clan].daimyo === g.id;
+    const alive = S.clans[g.clan].alive;
+    if (!isD && R() < 0.45) { const from = g.clan; g.clan = winner; g.done = true; const ps = provsOf(winner); g.prov = ps.includes(g.prov) ? g.prov : ps[0]; if (from === pc) log(`${g.name}が捕らえられ、${winner}家に寝返った。`, true); }
+    else if (alive && R() < 0.6) { releaseTo(g); if (g.clan === pc) log(`捕らわれた${g.name}が解放されて戻ってきた。`, true); }
+    else { const cl = g.clan; removeGen(g); if (cl === pc) log(`${g.name}が${winner}家に討たれた。`, true); if (isD) succession(cl); }
+  }
+}
+
+// ================= AI =================
+function frontierDist(c) {
+  const dist = new Array(NP).fill(99), q = [];
+  for (const i of provsOf(c)) if (PROV[i].adj.some(j => S.provs[j].owner !== c && !allied(c, S.provs[j].owner))) { dist[i] = 0; q.push(i); }
+  while (q.length) { const i = q.shift(); for (const j of PROV[i].adj) if (S.provs[j].owner === c && dist[j] > dist[i] + 1) { dist[j] = dist[i] + 1; q.push(j); } }
+  return dist;
+}
+function aiDecide(c, pi, g, fd) {
+  const C = S.clans[c], sp = S.provs[pi], pc = S.player;
+  const foes = PROV[pi].adj.filter(j => S.provs[j].owner !== c && !allied(c, S.provs[j].owner));
+  const threat = foes.reduce((s, j) => s + S.provs[j].hei, 0);
+  // 攻撃
+  if (foes.length && sp.hei >= 1000) {
+    let best = null;
+    const partner = availIn(pi).filter(x => x !== g).sort((a, b) => b.tou - a.tou)[0];
+    const lead = Math.max(g.tou, partner ? partner.tou : 0);
+    for (const j of foes) {
+      const q = S.provs[j];
+      if (q.owner === pc && S.turn < 2) continue;
+      const other = threat - q.hei;
+      const keep = Math.min(sp.hei * 0.4, other * 0.35 + 300);
+      const send = Math.floor((sp.hei - keep) / 100) * 100;
+      if (send < 800 && q.hei > 0) continue;
+      if (send < 100) continue;
+      const ratio = send * lf(lead) / (q.hei * (1 + q.jo / 100) * lf(defLead(j)) + 1);
+      const score = ratio + (q.owner === pc ? 0.08 : 0) + (j === KYOTO ? 0.1 : 0) + R() * 0.15;
+      if (ratio > C.aggr && (!best || score > best.score)) best = { score, j, send };
+    }
+    if (best) return { type: 'atk', to: best.j, hei: best.send, gens: partner && sp.hei > 3000 ? [g, partner] : [g] };
+  }
+  // 武将がいない隣国へ移る
+  const all = gensIn(pi, c);
+  if (all.length >= 2) {
+    const empty = PROV[pi].adj.filter(j => S.provs[j].owner === c && !gensIn(j, c).length);
+    if (empty.length) return { type: 'gmov', to: pick(empty) };
+  }
+  // 徴兵
+  const amt = recAmt(g, pi), cost = recCost(amt);
+  const tot = clanHei(c), harvest = provsOf(c).reduce((s, i) => s + S.provs[i].koku, 0) * 100;
+  if (C.gold >= cost && (tot + amt) * 0.4 <= harvest * 1.1 + C.rice * 0.3 && (foes.length && (sp.hei < threat * 0.9 + 800 || R() < 0.3))) return { type: 'chou' };
+  // 前線へ兵を送る
+  if (fd[pi] > 0 && sp.hei > 1200) {
+    const nx = PROV[pi].adj.filter(j => S.provs[j].owner === c && fd[j] < fd[pi]);
+    if (nx.length) return { type: 'mov', to: pick(nx), hei: Math.floor((sp.hei - 400) / 100) * 100 };
+  }
+  // 内政
+  const opts = [];
+  if (C.gold >= 40) {
+    if (sp.koku < capKoku(pi)) opts.push('kai', 'kai');
+    if (sp.shou < 120) opts.push('sho');
+    if (foes.length && sp.jo < 90 && C.gold >= 50) opts.push('chiku');
+  }
+  return opts.length ? { type: pick(opts) } : { type: 'none' };
+}
+async function aiClan(c) {
+  const fd = frontierDist(c);
+  for (const pi of shuffle(provsOf(c))) {
+    if (S.provs[pi].owner !== c) continue;
+    const gens = availIn(pi).sort((a, b) => b.tou - a.tou);
+    for (const g of gens) {
+      if (g.done || g.prov !== pi || g.clan !== c || S.provs[pi].owner !== c || !S.clans[c].alive) continue;
+      const act = aiDecide(c, pi, g, fd);
+      if (act.type === 'atk') { await doAttack(c, pi, act.to, act.gens, act.hei); if (!S.clans[S.player].alive) return; break; }
+      else if (act.type === 'gmov') { g.prov = act.to; g.done = true; }
+      else if (act.type === 'mov') { S.provs[pi].hei -= act.hei; S.provs[act.to].hei += act.hei; g.done = true; }
+      else if (act.type === 'none') g.done = true;
+      else if (!execDev(act.type, g, pi)) g.done = true;
+    }
+  }
+}
+
+// ================= TURN =================
+async function endSeason() {
+  if (busy) return;
+  busy = true; sel = -1; render(); req();
+  $('#busy').hidden = false;
+  const before = S.log.length ? S.log[0] : null;
+  await sleep(60);
+  const order = shuffle(Object.keys(S.clans).filter(c => c !== S.player && S.clans[c].alive));
+  for (const c of order) {
+    if (!S.clans[c].alive) continue;
+    await aiClan(c);
+    if (!S.clans[S.player].alive) break;
+  }
+  $('#busy').hidden = true;
+  if (!S.clans[S.player].alive || !provsOf(S.player).length) { busy = false; gameOver(); return; }
+  const news = []; for (const l of S.log) { if (l === before) break; news.push(l); }
+  seasonTick();
+  recolor(); busy = false; render(); req();
+  const wars = news.filter(l => l.msg.includes('攻略') || l.msg.includes('滅亡'));
+  if (wars.length) toast(`📜 ${wars[wars.length - 1].msg}${wars.length > 1 ? ` ほか${wars.length - 1}件` : ''}`, 3200);
+  await seasonEvents();
+  save();
+}
+function seasonTick() {
+  const pc = S.player;
+  S.season++; if (S.season > 3) { S.season = 0; S.year++; for (const c in S.clans) S.clans[c].aggr = 1.15 + R() * 0.35; }
+  S.turn++;
+  for (const c in S.clans) {
+    const C = S.clans[c]; if (!C.alive) continue;
+    const ps = provsOf(c);
+    const g = ps.reduce((s, i) => s + S.provs[i].shou, 0) * 2;
+    C.gold = Math.min(99999, C.gold + g);
+    if (S.season === 2) { const h = ps.reduce((s, i) => s + S.provs[i].koku, 0) * 100; C.rice += h; if (c === pc) toast(`🌾 秋の収穫　兵糧 +${fmt(h)}`, 2800); }
+    const up = Math.round(ps.reduce((s, i) => s + S.provs[i].hei, 0) / 10);
+    C.rice -= up;
+    if (C.rice < 0) {
+      C.rice = 0;
+      ps.forEach(i => { S.provs[i].hei = Math.floor(S.provs[i].hei * 0.85 / 100) * 100; });
+      if (c === pc) { log('兵糧が尽き、兵の一部が逃げ出した。', true); toast('⚠ 兵糧不足で兵が逃げ出しています', 3200); }
+    }
+  }
+  for (const g of S.gens) g.done = false;
+  for (const k of Object.keys(S.ally)) {
+    S.ally[k]--;
+    if (S.ally[k] <= 0) { delete S.ally[k]; const [a, b] = k.split('|'); if (a === pc || b === pc) log(`${a === pc ? b : a}家との同盟が期限切れになった。`, true); }
+  }
+}
+async function seasonEvents() {
+  const pc = S.player, C = S.clans[pc], mine = provsOf(pc);
+  const r = R();
+  if (r < 0.08) { const i = pick(mine); const v = S.provs[i].koku * 40; C.rice += v; log(`${PROV[i].name}で豊作。兵糧+${v}`, true); toast(`🌾 ${PROV[i].name}で豊作！ 兵糧 +${fmt(v)}`); }
+  else if (r < 0.15) { const v = 50 + Math.floor(R() * 60); C.gold += v; log(`商人から献金。金+${v}`, true); toast(`💰 商人から献金 金 +${v}`); }
+  else if (r < 0.21) {
+    const low = mine.filter(i => S.provs[i].jo < 60 && S.provs[i].hei > 500);
+    if (low.length) { const i = pick(low); const v = Math.floor(S.provs[i].hei * 0.15 / 100) * 100; S.provs[i].hei -= v; log(`${PROV[i].name}で一揆。兵-${v}`, true); toast(`⚠ ${PROV[i].name}で一揆！ 兵 −${fmt(v)}`); }
+  } else if (r < 0.28 && S.turn >= 3) {
+    const nb = [...neighborsOf(pc)].filter(c => !allied(pc, c) && clanHei(c) < clanHei(pc) * 0.9);
+    if (nb.length) {
+      const c = pick(nb);
+      const v = await ask(`${c}家から使者`, `${monHtml(c, 1)} ${c}家（${provsOf(c).length}国・兵${fmt(clanHei(c))}）が同盟を申し入れてきた。結べば4年間、互いに攻め込まない。`,
+        [{ label: '同盟を結ぶ', v: 1 }, { label: '断る', v: 0, cls: 'ghost' }]);
+      if (v) { S.ally[allyKey(pc, c)] = 16; log(`${c}家と同盟を結んだ。`, true); toast(`🤝 ${c}家と同盟`); }
+    }
+  }
+  render(); req();
+}
+
+function afterPlayerAction() {
+  render(); req(); checkWin(); save();
+}
+async function checkWin() {
+  const pc = S.player, n = provsOf(pc).length;
+  if (!S.won && n >= WIN_PROVS && provsOf(pc).includes(KYOTO)) {
+    S.won = true; save();
+    const yrs = S.year - 1560;
+    let best = null; try { best = JSON.parse(LS.get(BEST_KEY) || 'null'); } catch (e) {}
+    const rec = !best || S.year < best.year;
+    if (rec) LS.set(BEST_KEY, JSON.stringify({ year: S.year, clan: pc }));
+    sfx('win');
+    const v = await ask('天下統一', `${S.year}年${SEASON[S.season]}、${pc}家は京を押さえ、${n}国を従えて天下人となった。<br>挙兵から${yrs}年。${rec ? '<b style="color:var(--gold)">最速記録を更新！</b>' : `（最速記録 ${best.year}年 ${best.clan}家）`}`,
+      [{ label: '残る大名も平らげる', v: 1 }, { label: 'タイトルへ', v: 0, cls: 'ghost' }]);
+    if (!v) showTitle();
+  }
+  if (n === NP) { await ask('全国平定', `日ノ本のすべての国が${pc}家のもとに一つになった。`, [{ label: 'タイトルへ', v: 1 }]); LS.del(SAVE_KEY); showTitle(); }
+}
+async function gameOver() {
+  LS.del(SAVE_KEY); sfx('lose');
+  await ask(`${S.player}家 滅亡`, `${S.year}年${SEASON[S.season]}、最後の城が落ち、${S.player}家は歴史から姿を消した。`, [{ label: 'タイトルへ', v: 1 }]);
+  showTitle();
+}
+
+function save() { if (S && S.clans[S.player].alive) LS.set(SAVE_KEY, JSON.stringify(S)); }
+function load() {
+  try { const s = JSON.parse(LS.get(SAVE_KEY) || 'null'); if (s && s.v === 1 && s.provs && s.provs.length === NP) return s; } catch (e) {}
+  return null;
+}
+
+// ================= TITLE =================
+function showTitle() {
+  closeModal();
+  const sv = load();
+  let best = null; try { best = JSON.parse(LS.get(BEST_KEY) || 'null'); } catch (e) {}
+  const title = $('#title'); title.hidden = false;
+  $('#titlein').innerHTML = `<div class="eb">SENGOKU · 1560</div><h1>戦国<br>天下録</h1>
+    <p class="lead">群雄割拠の世。ひとつの家を選び、内政で国を富ませ、合戦で国を奪い、京を押さえて天下を目指す。</p>
+    ${sv ? `<button class="btn" id="cont">続きから　<small style="font-family:var(--sans);font-size:12px;font-weight:500">${sv.player}家 · ${sv.year}年${SEASON[sv.season]}</small></button>` : ''}
+    <button class="btn ${sv ? 'ghost' : ''}" id="newg">新しく始める</button>
+    ${best ? `<p class="note" style="margin-top:14px;text-align:center">最速の天下統一：${best.year}年（${best.clan}家）</p>` : ''}
+    <div class="how"><b>遊び方</b><br>
+    ・国をタップして武将に命令。武将は1季節に1回動けます。<br>
+    ・<b>開墾</b>で秋の兵糧、<b>商業</b>で毎季の金が増えます。兵は季節ごとに兵糧を食べます。<br>
+    ・<b>出陣</b>すると合戦。突撃・射撃・守備の三すくみと計略で5日間戦います。<br>
+    ・${WIN_PROVS}国以上と京（山城）を押さえれば天下統一。進行は自動で保存されます。</div>`;
+  const nb = $('#newg'); nb.onclick = () => { sfx('tap'); pickClan(); };
+  const cb = $('#cont'); if (cb) cb.onclick = () => { sfx('tap'); S = sv; startGame(); };
+}
+function pickClan() {
+  const cs = CLANS.map(c => {
+    const ps = PROV.filter(p => p.clan0 === c.name);
+    return { c, n: ps.length, hei: ps.reduce((s, p) => s + p.hei, 0), d: c.gens[0][0] };
+  }).sort((a, b) => b.n - a.n || b.hei - a.hei);
+  $('#titlein').innerHTML = `<div class="eb">大名を選ぶ</div><h1 style="font-size:40px">どの家で<br>天下を狙う？</h1>
+    <p class="lead">国の多い家ほど楽に始められます。一国の小大名から成り上がるのも一興。</p>
+    <div class="list">${cs.map(x => `<button class="row" data-c="${x.c.name}"><span class="mon" style="background:${x.c.color}">${x.c.mon}</span><div class="grow"><b>${x.c.name}家</b><small>${x.d} · ${PROV[x.c.cap].name} · ${x.n}国 · 兵${fmt(x.hei)}</small></div>
+      <span class="diff ${x.n >= 4 ? 'e' : x.n === 1 ? 'h' : ''}">${x.n >= 4 ? '易' : x.n >= 2 ? '普' : '難'}</span></button>`).join('')}</div>
+    <button class="btn ghost" id="back">戻る</button>`;
+  $('#titlein').querySelectorAll('[data-c]').forEach(b => b.onclick = () => { sfx('tap'); newGame(b.dataset.c); save(); startGame(); });
+  $('#back').onclick = showTitle;
+  $('#title').scrollTop = 0;
+}
+function startGame() {
+  $('#title').hidden = true;
+  sel = -1; busy = false;
+  render(); resize(); recolor();
+  const ps = provsOf(S.player);
+  centerOn(ps.includes(CL[S.player].cap) ? CL[S.player].cap : ps[0], 1.1);
+  render(); req();
+}
+
+// ================= BOOT =================
+$('#titlein').innerHTML = `<div class="eb">SENGOKU · 1560</div><h1>戦国<br>天下録</h1><p class="lead">地図を描いています…</p>`;
+window.addEventListener('resize', () => { if (S) resize(); });
+if (window.ResizeObserver) new ResizeObserver(() => { if (S) resize(); }).observe($('#mapwrap'));
+setTimeout(() => {
+  buildRaster();
+  showTitle();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(req);
+}, 30);
+window.__sg = { get S() { return S; }, endSeason, provsOf };
+})();
+</script>
