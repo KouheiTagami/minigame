@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>回路戦機</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d1117; --panel: #151b24; --card: #1d2530; --card2: #242e3b; --line: #2c3847;
+    --ink: #e6edf5; --dim: #8b9bb0; --cyan: #37d0ff; --orange: #ff8a3d; --green: #4fe08a; --red: #ff5566; --yellow: #ffd23f;
+    --k-act: #2a64c8; --k-wpn: #c0602a; --k-cond: #15846a; --k-ctl: #6c4bc0; --k-start: #4a5566;
+    --dot: "DotGothic16", "Zen Kaku Gothic New", monospace;
+    --sans: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-tap-highlight-color: transparent; }
+  body { min-height: 100vh; background:
+    linear-gradient(rgba(55,208,255,.035) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(55,208,255,.035) 1px, transparent 1px) 0 0 / 24px 24px, var(--bg); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 20px 16px 110px; }
+  .eb { font-family: var(--dot); color: var(--cyan); letter-spacing: .25em; font-size: 12px; }
+  h1 { font-family: var(--dot); font-weight: 400; font-size: clamp(46px, 15vw, 72px); margin: 8px 0 6px; line-height: 1.05; letter-spacing: .04em;
+    text-shadow: 0 0 18px rgba(55,208,255,.35); }
+  h2 { font-family: var(--dot); font-weight: 400; font-size: 26px; margin: 4px 0 10px; }
+  .lead { color: var(--dim); line-height: 1.8; font-size: 14.5px; margin: 0 0 22px; }
+  .menu { display: flex; flex-direction: column; gap: 10px; }
+  .mbtn { display: flex; align-items: center; gap: 14px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+  .mbtn .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-family: var(--dot); font-size: 22px; flex: none; color: #0d1117; }
+  .mbtn b { display: block; font-size: 17px; }
+  .mbtn small { color: var(--dim); font-size: 12.5px; }
+  .mbtn.main { border-color: var(--cyan); background: #14283a; }
+  .top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .back { width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); flex: none; }
+  .top .tt { font-family: var(--dot); font-size: 20px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tabs button { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 6px 4px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabs button.on { border-color: var(--cyan); background: #14283a; color: var(--cyan); }
+  .field { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .field > span { font-size: 12px; color: var(--dim); width: 34px; flex: none; }
+  .field input[type=text] { flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; color: var(--ink); font: inherit; font-size: 15px; }
+  .seg { display: flex; flex: 1; gap: 5px; }
+  .seg button { flex: 1; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 6px 2px; font-size: 13px; line-height: 1.25; }
+  .seg button small { display: block; font-size: 10px; color: var(--dim); }
+  .seg button.on { border-color: var(--cyan); background: #14283a; }
+  .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; flex: none; }
+  .sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--bg) inset; }
+  #grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin: 12px auto 8px; max-width: 420px; user-select: none; -webkit-user-select: none; }
+  .cell { position: relative; aspect-ratio: 1; border-radius: 7px; border: 1px solid #243040; background: #121922; padding: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; line-height: 1.1; min-width: 0; overflow: visible; }
+  .cell b { font-size: 11px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+  .cell small { font-size: 8.5px; opacity: .85; white-space: nowrap; }
+  .cell.f { border-color: rgba(255,255,255,.18); color: #fff; }
+  .cell.sel { outline: 2px solid var(--yellow); outline-offset: 1px; z-index: 2; }
+  .k-act { background: var(--k-act) !important; } .k-wpn { background: var(--k-wpn) !important; } .k-cond { background: var(--k-cond) !important; }
+  .k-ctl { background: var(--k-ctl) !important; } .k-start { background: var(--k-start) !important; }
+  .ar { position: absolute; font-size: 8px; line-height: 1; color: #fff; pointer-events: none; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+  .ar.y { color: #7dffb0; } .ar.n { color: #ff7d8c; }
+  .ar.d0 { top: -4px; left: 50%; transform: translateX(-50%); } .ar.d2 { bottom: -4px; left: 50%; transform: translateX(-50%); }
+  .ar.d1 { right: -4px; top: 50%; transform: translateY(-50%); } .ar.d3 { left: -4px; top: 50%; transform: translateY(-50%); }
+  .ar.n.d0, .ar.n.d2 { margin-left: 5px; } .ar.n.d1, .ar.n.d3 { margin-top: 5px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 5px 12px; font-size: 11px; color: var(--dim); justify-content: center; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 3px; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(13,17,23,.94); border-top: 1px solid var(--line); z-index: 5;
+    padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); backdrop-filter: blur(6px); }
+  .bar .in { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 6px; }
+  .bar button { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 11px 4px; font-weight: 700; font-size: 14px; }
+  .bar .go { background: var(--cyan); color: #06222e; border-color: var(--cyan); }
+  .list { display: flex; flex-direction: column; gap: 7px; }
+  .row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+  .row .grow { flex: 1; min-width: 0; }
+  .row small { display: block; color: var(--dim); font-size: 11.5px; }
+  .row.on { border-color: var(--cyan); background: #14283a; }
+  .row .dotc { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  .row .st { font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .mini { border: 1px solid var(--line); background: var(--card2); border-radius: 9px; padding: 6px 9px; font-size: 12px; white-space: nowrap; }
+  .mini.red { color: var(--red); }
+  .sec { font-size: 12px; color: var(--dim); letter-spacing: .12em; margin: 16px 0 8px; font-weight: 700; }
+  textarea { width: 100%; min-height: 96px; background: #0b0f15; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); padding: 10px;
+    font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; resize: vertical; }
+  #modal { position: fixed; inset: 0; background: rgba(3,6,10,.66); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+  .sheet { width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 20px 20px 0 0;
+    padding: 16px 14px calc(16px + env(safe-area-inset-bottom)); animation: up .2s ease; }
+  @keyframes up { from { transform: translateY(24px); opacity: 0; } }
+  .sheet h3 { font-family: var(--dot); font-weight: 400; font-size: 21px; margin: 0 0 4px; }
+  .sheet .sub { color: var(--dim); font-size: 12.5px; margin: 0 0 12px; line-height: 1.65; }
+  .btn { display: block; width: 100%; border: 0; border-radius: 14px; padding: 13px; font-weight: 700; font-size: 15px; background: var(--cyan); color: #06222e; margin-top: 10px; }
+  .btn.ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+  .btn.red { background: var(--red); color: #fff; }
+  .pal { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .pal button { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 7px 8px; text-align: left; font-size: 13px; }
+  .pal button i { width: 30px; height: 26px; border-radius: 6px; display: grid; place-items: center; font-style: normal; font-size: 10.5px; font-weight: 700; flex: none; color: #fff; }
+  .pal button small { display: block; color: var(--dim); font-size: 10px; line-height: 1.3; }
+  .ph { font-size: 11.5px; color: var(--dim); margin: 12px 0 6px; font-weight: 700; }
+  .dirs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .dirs button { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 0; font-size: 18px; }
+  .dirs button.on { background: #fff; color: #0d1117; }
+  .dirs.y button.on { background: var(--green); } .dirs.n button.on { background: var(--red); color: #fff; }
+  .lbl { font-size: 12px; color: var(--dim); display: flex; justify-content: space-between; margin: 12px 0 4px; }
+  .lbl b { color: var(--ink); font-size: 16px; }
+  input[type=range] { width: 100%; accent-color: var(--cyan); }
+  .help { font-size: 13.5px; line-height: 1.85; color: var(--dim); }
+  .help b { color: var(--ink); }
+  #toast { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 40; display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; width: max-content; max-width: 90vw; }
+  #toast div { background: rgba(21,27,36,.96); border: 1px solid var(--cyan); border-radius: 12px; padding: 8px 14px; font-size: 13.5px; animation: up .2s ease; }
+  /* battle */
+  #bat { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; background: var(--bg); z-index: 10; overflow-y: auto; }
+  .bh { width: 100%; max-width: 560px; display: flex; align-items: center; gap: 8px; padding: 8px 8px 4px; }
+  .bh button { height: 36px; min-width: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); font-weight: 700; font-size: 13px; }
+  .bh .vs { flex: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; font-weight: 700; }
+  .bh .vs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bh .vs span:last-child { text-align: right; }
+  .bh .vs b { font-family: var(--dot); font-size: 22px; font-weight: 400; min-width: 34px; text-align: center; }
+  .hps { width: 100%; max-width: 560px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 8px 6px; }
+  .hpb { height: 8px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .hpb i { display: block; height: 100%; width: 100%; border-radius: 99px; transition: width .2s; }
+  .hps .r .hpb i { margin-left: auto; }
+  #cv { display: block; border-radius: 12px; touch-action: manipulation; }
+  .mon { width: 100%; max-width: 560px; display: flex; gap: 12px; padding: 10px 8px 16px; align-items: flex-start; }
+  #mg { display: grid; grid-template-columns: repeat(8, 14px); gap: 2px; flex: none; }
+  #mg div { width: 14px; height: 14px; border-radius: 3px; background: #151d27; }
+  #mg div.hl { outline: 2px solid var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  #ms { font-size: 12px; color: var(--dim); line-height: 1.7; min-width: 0; }
+  #ms b { color: var(--ink); }
+  .res { text-align: center; font-family: var(--dot); font-size: 40px; margin: 6px 0 2px; }
+  @media (prefers-reduced-motion: reduce) { .sheet, #toast div { animation: none; } }
+</style>
+
+<div id="home" class="scr"></div>
+<div id="edit" class="scr" hidden></div>
+<div id="page" class="scr" hidden></div>
+<div id="bat" hidden>
+  <div class="bh">
+    <button id="bquit" aria-label="やめる">✕</button>
+    <div class="vs"><span id="na"></span><b id="tm">90</b><span id="nb"></span></div>
+    <button id="bspd">×1</button><button id="bskip" aria-label="結果まで飛ばす">≫</button>
+  </div>
+  <div class="hps"><div><div class="hpb"><i id="ha"></i></div></div><div class="r"><div class="hpb"><i id="hb"></i></div></div></div>
+  <canvas id="cv"></canvas>
+  <div class="mon"><div id="mg"></div><div id="ms"></div></div>
+</div>
+<div id="modal" hidden></div>
+<div id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const PI = Math.PI;
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+
+// ================= DEFINITIONS =================
+const GW = 8, GH = 10, NC = GW * GH;
+const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];
+const DIRG = ['▲', '▶', '▼', '◀'], DIRB = ['↑', '→', '↓', '←'];
+const N = 0, E = 1, S = 2, W = 3;
+const BODY = [
+  { n: '軽量', hp: 80, spd: 2.4, turn: 0.09, d: '速い・脆い' },
+  { n: '標準', hp: 110, spd: 1.8, turn: 0.07, d: 'バランス' },
+  { n: '重装', hp: 160, spd: 1.25, turn: 0.05, d: '硬い・遅い' },
+];
+const WPN = [
+  { n: '機関砲', cd: 6, dmg: 3, sp: 8, life: 70, spr: 0.06, k: 1, d: '連射' },
+  { n: 'キャノン', cd: 34, dmg: 15, sp: 7.5, life: 90, spr: 0.01, k: 1, d: '一撃が重い' },
+  { n: '散弾', cd: 30, dmg: 3, sp: 7.5, life: 32, spr: 0.24, k: 6, d: '近距離専用' },
+];
+const PAL = ['#37d0ff', '#ff8a3d', '#4fe08a', '#ff5c8a', '#ffd23f', '#a97bff'];
+const MSL = { ammo: 3, cd: 40, dmg: 12, sp: 4.2, life: 170, turn: 0.05 };
+const LIMIT = 90 * 30;
+// k: act=動作(その瞬間の行動) wpn=武器(即時) ctl=制御(即時) cond=判定
+const CH = {
+  fwd: { k: 'act', n: '前進', s: '前進', d: '向いている方向へ進む' },
+  back: { k: 'act', n: '後退', s: '後退', d: '後ろへ下がる（少し遅い）' },
+  sl: { k: 'act', n: '左へ移動', s: '左移', d: '向きはそのまま左へ動く' },
+  sr: { k: 'act', n: '右へ移動', s: '右移', d: '向きはそのまま右へ動く' },
+  tl: { k: 'act', n: '左旋回', s: '左旋', d: '左へ向きを変える' },
+  tr: { k: 'act', n: '右旋回', s: '右旋', d: '右へ向きを変える' },
+  aim: { k: 'act', n: '照準', s: '照準', d: '一番近い敵の方へ向きを変える' },
+  wait: { k: 'act', n: '待機', s: '待機', d: '何もしない' },
+  fire: { k: 'wpn', n: '主砲', s: '主砲', d: '主砲を撃つ（装填中なら何もしない）' },
+  msl: { k: 'wpn', n: 'ミサイル', s: 'ミサ', d: '追尾ミサイルを撃つ（3発まで）' },
+  jmp: { k: 'ctl', n: '経由', s: '経由', d: '何もせず矢印の方へ進む' },
+  cset: { k: 'ctl', n: 'カウンタ=0', s: 'C=0', d: 'カウンタを0に戻す' },
+  cinc: { k: 'ctl', n: 'カウンタ+1', s: 'C+1', d: 'カウンタを1増やす' },
+  edist: { k: 'cond', n: '敵との距離', s: '距離', d: '一番近い敵がX未満の距離ならYES', p: [30, 500, 10, 150], f: p => '<' + p },
+  efront: { k: 'cond', n: '敵が正面', s: '正面', d: '敵が正面±X°以内ならYES', p: [2, 90, 1, 10], f: p => '±' + p + '°' },
+  eleft: { k: 'cond', n: '敵が左側', s: '左側', d: '敵が自分から見て左側ならYES' },
+  ebul: { k: 'cond', n: '敵弾接近', s: '弾接', d: 'X以内に向かってくる敵弾があればYES', p: [30, 300, 10, 120], f: p => '<' + p },
+  hp: { k: 'cond', n: '自分のHP', s: '自HP', d: '自分のHPがX%以下ならYES', p: [10, 90, 5, 40], f: p => '≤' + p + '%' },
+  ehp: { k: 'cond', n: '敵のHP', s: '敵HP', d: '敵のHPがX%以下ならYES', p: [10, 90, 5, 40], f: p => '≤' + p + '%' },
+  wall: { k: 'cond', n: '前方に障害物', s: '障害', d: '前方X以内に壁か柱があればYES', p: [20, 200, 10, 60], f: p => '<' + p },
+  ammo: { k: 'cond', n: 'ミサイル残弾', s: '残弾', d: 'ミサイルが残っていればYES' },
+  ready: { k: 'cond', n: '主砲装填済', s: '装填', d: '主砲をすぐ撃てるならYES' },
+  cnt: { k: 'cond', n: 'カウンタ判定', s: 'C≥', d: 'カウンタがX以上ならYES', p: [1, 200, 1, 30], f: p => '≥' + p },
+  rnd: { k: 'cond', n: '確率', s: '確率', d: 'X%の確率でYES', p: [5, 95, 5, 50], f: p => p + '%' },
+};
+// コード互換のため順番は固定（末尾に追加のみ）
+const KEYS = ['fwd', 'back', 'sl', 'sr', 'tl', 'tr', 'aim', 'wait', 'fire', 'msl', 'jmp', 'cset', 'cinc', 'edist', 'efront', 'eleft', 'ebul', 'hp', 'ehp', 'wall', 'ammo', 'ready', 'cnt', 'rnd'];
+const GROUPS = [['動作（その瞬間の行動）', ['fwd', 'back', 'sl', 'sr', 'tl', 'tr', 'aim', 'wait']], ['武器（即時）', ['fire', 'msl']],
+  ['判定（YES / NO で分岐）', ['edist', 'efront', 'eleft', 'ebul', 'hp', 'ehp', 'wall', 'ammo', 'ready', 'cnt', 'rnd']], ['制御（即時）', ['jmp', 'cset', 'cinc']]];
+
+const clampP = (t, p) => { const d = CH[t].p; if (!d) return 0; p = Math.round((+p || d[3]) / d[2]) * d[2]; return clamp(p, d[0], d[1]); };
+const ci = v => clamp(Math.round(+v) || 0, 0, 99);
+function sanitize(o) {
+  if (!o || typeof o !== 'object') return null;
+  const d = { name: String(o.name || 'NONAME').replace(/[\u0000-\u001f]/g, '').slice(0, 12) || 'NONAME', body: clamp(ci(o.body), 0, 2), wpn: clamp(ci(o.wpn), 0, 2),
+    col: clamp(ci(o.col), 0, 5), start: clamp(ci(o.start), 0, 3), cells: Array(NC).fill(null) };
+  if (Array.isArray(o.cells)) o.cells.forEach((c, i) => {
+    if (i > 0 && i < NC && c && CH[c.t]) d.cells[i] = { t: c.t, p: clampP(c.t, c.p), a: clamp(ci(c.a), 0, 3), b: clamp(ci(c.b), 0, 3) };
+  });
+  return d;
+}
+function encode(d) {
+  const cells = [];
+  d.cells.forEach((c, i) => { if (c) cells.push(CH[c.t].k === 'cond' ? [i, KEYS.indexOf(c.t), c.p, c.a, c.b] : CH[c.t].p ? [i, KEYS.indexOf(c.t), c.p, c.a] : [i, KEYS.indexOf(c.t), 0, c.a]); });
+  const bytes = new TextEncoder().encode(JSON.stringify([1, d.name, d.body, d.wpn, d.col, d.start, cells]));
+  let bin = ''; bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return 'KS1-' + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decode(str) {
+  try {
+    const m = String(str).replace(/\s+/g, '').match(/KS1-([A-Za-z0-9_-]+)/);
+    if (!m) return null;
+    let b = m[1].replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
+    const bin = atob(b); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const a = JSON.parse(new TextDecoder().decode(bytes));
+    if (!Array.isArray(a) || a[0] !== 1) return null;
+    const cells = Array(NC).fill(null);
+    (a[6] || []).forEach(c => { if (Array.isArray(c) && KEYS[c[1]]) cells[c[0]] = { t: KEYS[c[1]], p: c[2], a: c[3], b: c[4] }; });
+    return sanitize({ name: a[1], body: a[2], wpn: a[3], col: a[4], start: a[5], cells });
+  } catch (e) { return null; }
+}
+function mk(name, body, wpn, col, start, list) {
+  const cells = Array(NC).fill(null);
+  for (const [x, y, t, p, a, b] of list) cells[y * GW + x] = { t, p: clampP(t, p), a, b: b ?? 0 };
+  return { name, body, wpn, col, start, cells };
+}
+const blank = i => ({ name: '機体' + (i + 1), body: 1, wpn: 0, col: i % 6, start: S, cells: Array(NC).fill(null) });
+
+// ---- 組み込みの相手（チャレンジ） ----
+const CPU = [
+  { d: mk('カカシ', 1, 0, 4, S, [[0, 1, 'efront', 12, E, S], [1, 1, 'fire', 0, S], [1, 2, 'tr', 0, S], [0, 2, 'tr', 0, S]]),
+    note: 'ぐるぐる回りながら、前を通った敵を撃つだけの的。' },
+  { d: mk('突撃くん', 0, 2, 1, S, [[0, 1, 'aim', 0, S], [0, 2, 'edist', 110, E, S], [1, 2, 'fire', 0, E], [0, 3, 'fwd', 0, S], [0, 4, 'fwd', 0, E]]),
+    note: 'まっすぐ突っ込んで散弾を浴びせてくる。' },
+  { d: mk('ミサイル屋', 1, 0, 3, S, [[0, 1, 'aim', 0, S], [0, 2, 'ammo', 0, E, S], [1, 2, 'edist', 260, E, N], [2, 2, 'msl', 0, S], [2, 3, 'jmp', 0, W], [1, 1, 'fwd', 0, E],
+      [0, 3, 'ebul', 110, E, S], [1, 3, 'sr', 0, E], [0, 4, 'efront', 10, E, S], [1, 4, 'fire', 0, S], [1, 5, 'sl', 0, E], [0, 5, 'sl', 0, E]]),
+    note: 'ミサイルを撃ち切ったら、回り込みながら機関砲。' },
+  { d: mk('スナイパー', 1, 1, 5, S, [[0, 1, 'aim', 0, S], [0, 2, 'ebul', 130, E, S], [1, 2, 'eleft', 0, E, N], [2, 2, 'sl', 0, E], [1, 1, 'sr', 0, E],
+      [0, 3, 'edist', 180, E, S], [1, 3, 'back', 0, E], [2, 3, 'efront', 8, E, S], [3, 3, 'fire', 0, E],
+      [0, 4, 'efront', 8, E, S], [1, 4, 'fire', 0, S], [1, 5, 'fwd', 0, E], [0, 5, 'fwd', 0, E]]),
+    note: '距離を取ってキャノンを撃ち、弾が来ると横に避ける。' },
+  { d: mk('鉄壁', 2, 1, 0, S, [[0, 1, 'aim', 0, S], [0, 2, 'msl', 0, S], [0, 3, 'efront', 6, E, S], [1, 3, 'fire', 0, S], [1, 4, 'jmp', 0, W], [0, 4, 'jmp', 0, S],
+      [0, 5, 'edist', 220, E, S], [1, 5, 'ebul', 120, E, S], [2, 5, 'eleft', 0, E, S], [3, 5, 'sl', 0, E], [2, 6, 'sr', 0, E], [1, 6, 'back', 0, S],
+      [0, 6, 'fwd', 0, S]]),
+    note: '重装キャノンにミサイル、弾よけと間合い管理まで。' },
+  { d: mk('エース', 0, 0, 2, S, [[0, 1, 'aim', 0, S], [0, 2, 'cinc', 0, S], [0, 3, 'cnt', 80, E, S], [1, 3, 'cset', 0, W],
+      [0, 4, 'efront', 10, E, S], [1, 4, 'fire', 0, S], [0, 5, 'jmp', 0, E], [1, 5, 'edist', 110, E, S], [2, 5, 'back', 0, E],
+      [1, 6, 'cnt', 40, E, S], [2, 6, 'sl', 0, E], [1, 7, 'sr', 0, E]]),
+    note: 'カウンタで左右を切り替えながら撃ちまくる高速機。最強の刺客。' },
+];
+const DEFAULT = () => mk('はじめの一機', 1, 0, 0, S, [[0, 1, 'aim', 0, S], [0, 2, 'efront', 10, E, S], [1, 2, 'fire', 0, S], [1, 3, 'jmp', 0, W], [0, 3, 'jmp', 0, S],
+  [0, 4, 'edist', 160, E, S], [1, 4, 'sl', 0, E], [0, 5, 'fwd', 0, E]]);
+
+// ================= STATE =================
+let slots = (LS.get('ks.slots', null) || []).map(sanitize).filter(Boolean);
+if (!slots.length) slots = [DEFAULT()];
+while (slots.length < 4) slots.push(blank(slots.length));
+slots.length = 4;
+let rivals = (LS.get('ks.rivals', []) || []).map(c => { const d = decode(c); return d ? { code: c, d } : null; }).filter(Boolean);
+let cleared = LS.get('ks.clear', 0) | 0;
+let cur = clamp(LS.get('ks.cur', 0) | 0, 0, 3);
+let selCell = -1;
+const saveSlots = () => LS.set('ks.slots', slots);
+const saveRivals = () => LS.set('ks.rivals', rivals.map(r => r.code));
+
+// ================= SOUND =================
+let AC = null, lastShot = 0;
+function sfx(kind) {
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const t = AC.currentTime;
+    const tone = (f, dur, type, vol, f2, at = 0) => {
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t + at); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + at + dur);
+      g.gain.setValueAtTime(vol, t + at); g.gain.exponentialRampToValueAtTime(0.001, t + at + dur);
+      o.connect(g).connect(AC.destination); o.start(t + at); o.stop(t + at + dur + 0.02);
+    };
+    if (kind === 'shot') { const n = performance.now(); if (n - lastShot < 70) return; lastShot = n; tone(900, 0.05, 'square', 0.025, 300); }
+    else if (kind === 'big') tone(220, 0.14, 'sawtooth', 0.05, 70);
+    else if (kind === 'msl') tone(300, 0.25, 'sawtooth', 0.04, 900);
+    else if (kind === 'hit') tone(160, 0.06, 'square', 0.04, 80);
+    else if (kind === 'boom') { tone(120, 0.5, 'sawtooth', 0.12, 30); tone(60, 0.6, 'sine', 0.2, 25); }
+    else if (kind === 'tap') tone(700, 0.05, 'triangle', 0.06);
+    else if (kind === 'win') [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, 'square', 0.05, 0, i * 0.1));
+    else if (kind === 'lose') [392, 311, 233].forEach((f, i) => tone(f, 0.35, 'triangle', 0.1, 0, i * 0.15));
+  } catch (e) {}
+}
+
+// ================= UI HELPERS =================
+function toast(msg, ms = 2200) {
+  const el = document.createElement('div'); el.textContent = msg; $('#toast').appendChild(el);
+  setTimeout(() => el.remove(), ms);
+}
+const modal = $('#modal'); let MH = {};
+function openModal(html, handlers, dismiss = true) {
+  modal.innerHTML = `<div class="sheet">${html}</div>`; modal.hidden = false; MH = handlers || {}; modal.dataset.dismiss = dismiss ? '1' : '';
+}
+function closeModal() { modal.hidden = true; modal.innerHTML = ''; MH = {}; }
+modal.addEventListener('click', e => {
+  if (e.target === modal) { if (modal.dataset.dismiss) { closeModal(); if (selCell >= 0) { selCell = -1; renderGrid(); } } return; }
+  const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+  if (b.dataset.a === 'x') { closeModal(); if (selCell >= 0) { selCell = -1; renderGrid(); } return; }
+  MH[b.dataset.a] && MH[b.dataset.a](b.dataset, b);
+});
+function confirmBox(title, body, okLabel, cls = '') {
+  return new Promise(res => openModal(`<h3>${title}</h3><p class="sub">${body}</p><button class="btn ${cls}" data-a="ok">${okLabel}</button><button class="btn ghost" data-a="no">やめる</button>`,
+    { ok: () => { closeModal(); res(true); }, no: () => { closeModal(); res(false); } }, false));
+}
+async function copyText(t, ta) {
+  try { await navigator.clipboard.writeText(t); toast('コピーしました'); return; } catch (e) {}
+  try { if (ta) { ta.focus(); ta.select(); } if (document.execCommand('copy')) { toast('コピーしました'); return; } } catch (e) {}
+  toast('コピーできませんでした。長押しで選択してください');
+}
+const inFrame = (() => { try { return window.top !== window; } catch (e) { return true; } })();
+const specOf = d => `${BODY[d.body].n}・${WPN[d.wpn].n}`;
+const chipCount = d => d.cells.filter(Boolean).length;
+
+function show(id) {
+  for (const s of ['home', 'edit', 'page']) $('#' + s).hidden = s !== id;
+  window.scrollTo(0, 0);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-go]'); if (!b) return;
+  sfx('tap'); go(b.dataset.go);
+});
+function go(where) {
+  if (where === 'home') renderHome();
+  else if (where === 'edit') renderEdit();
+  else if (where === 'chal') renderChal();
+  else if (where === 'free') openFree();
+  else if (where === 'rival') renderRival();
+  else if (where === 'help') openHelp();
+}
+
+// ================= HOME =================
+function renderHome() {
+  show('home');
+  $('#home').innerHTML = `<div class="wrap">
+    <div class="eb">CIRCUIT MECHA</div><h1>回路戦機</h1>
+    <p class="lead">チップを並べてロボットのAIを組み、戦いを見守る。<br>組んだAIはコードにして、友だちのAIと対戦できる。</p>
+    <div class="menu">
+      <button class="mbtn main" data-go="edit"><span class="ic" style="background:var(--cyan)">工</span><span><b>工房</b><small>チップを並べてAIを組む（${slots.map(s => esc(s.name)).join('・')}）</small></span></button>
+      <button class="mbtn" data-go="chal"><span class="ic" style="background:var(--orange)">挑</span><span><b>チャレンジ</b><small>6体の刺客を順に倒す　${Math.min(cleared, CPU.length)}/${CPU.length} クリア</small></span></button>
+      <button class="mbtn" data-go="free"><span class="ic" style="background:var(--green)">戦</span><span><b>フリー対戦</b><small>相手と機数（1〜3対3）を選んで対戦</small></span></button>
+      <button class="mbtn" data-go="rival"><span class="ic" style="background:var(--yellow)">友</span><span><b>ライバル</b><small>友だちのコードを読み込む（${rivals.length}体）</small></span></button>
+      <button class="mbtn" data-go="help"><span class="ic" style="background:#8b9bb0">?</span><span><b>遊び方</b><small>チップの動き方とルール</small></span></button>
+    </div></div>`;
+}
+function openHelp() {
+  openModal(`<h3>遊び方</h3><div class="help">
+    <p>機体は <b>8×10 の盤面に置いたチップ</b> を、左上の <b>START</b> から矢印に沿って実行して動きます（1秒に30回）。</p>
+    <p>・<b style="color:#6fa0ff">青：動作チップ</b>（前進・旋回・照準など）を実行すると、その瞬間の行動が決まります。次の瞬間はその矢印の先から続きます。<br>
+    ・<b style="color:#ff9a5c">橙：武器</b>・<b style="color:#b99bff">紫：制御</b>・<b style="color:#5fe0b0">緑：判定</b> は一瞬で処理して次へ進みます。判定は <b style="color:#7dffb0">▼緑=YES</b> と <b style="color:#ff7d8c">▼赤=NO</b> で分かれます。<br>
+    ・<b>空きマスや盤の外に進むと START に戻ります。</b> 迷ったら「動作で終わって空きマスへ」が基本形です。</p>
+    <p>・機体は 軽量／標準／重装、主砲は 機関砲／キャノン／散弾 から選べます。ミサイルは全機3発。<br>
+    ・相手を全滅させれば勝ち。90秒で決着しなければ、残りHPの割合で判定します。</p>
+    <p><b>友だちと対戦：</b>工房の「書き出し」でコードをコピーして送ります。受け取った人は「ライバル」に貼り付けて読み込み、フリー対戦で戦わせます。</p></div>
+    <button class="btn" data-a="x">閉じる</button>`);
+}
+
+// ================= EDITOR =================
+function renderEdit() {
+  show('edit');
+  const d = slots[cur];
+  $('#edit').innerHTML = `<div class="wrap">
+    <div class="top"><button class="back" data-go="home" aria-label="戻る">←</button><div class="tt">工房</div></div>
+    <div class="tabs">${slots.map((s, i) => `<button data-e="slot" data-v="${i}" class="${i === cur ? 'on' : ''}">${i + 1}. ${esc(s.name)}</button>`).join('')}</div>
+    <div class="field"><span>名前</span><input type="text" id="ename" maxlength="12" value="${esc(d.name)}"></div>
+    <div class="field"><span>機体</span><div class="seg">${BODY.map((b, i) => `<button data-e="body" data-v="${i}" class="${d.body === i ? 'on' : ''}">${b.n}<small>HP${b.hp}・${b.d}</small></button>`).join('')}</div></div>
+    <div class="field"><span>主砲</span><div class="seg">${WPN.map((w, i) => `<button data-e="wpn" data-v="${i}" class="${d.wpn === i ? 'on' : ''}">${w.n}<small>${w.d}</small></button>`).join('')}</div></div>
+    <div class="field"><span>色</span><div class="seg" style="flex:0;gap:8px">${PAL.map((c, i) => `<button class="sw ${d.col === i ? 'on' : ''}" data-e="col" data-v="${i}" style="background:${c}" aria-label="色${i + 1}"></button>`).join('')}</div></div>
+    <div id="grid"></div>
+    <div class="legend"><span><i style="background:var(--k-act)"></i>動作</span><span><i style="background:var(--k-wpn)"></i>武器</span><span><i style="background:var(--k-cond)"></i>判定</span><span><i style="background:var(--k-ctl)"></i>制御</span>
+      <span>▼白=次　<b style="color:#7dffb0">▼</b>YES　<b style="color:#ff7d8c">▼</b>NO</span></div>
+    <p class="legend" style="margin-top:6px">マスをタップしてチップを置く・編集。空きマスか盤の外へ進むとSTARTに戻ります。</p>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:10px"><button class="mini" data-e="imp">コードから読み込む</button><button class="mini red" data-e="clr">全消去</button></div>
+  </div>
+  <div class="bar"><div class="in"><button class="go" data-e="test">▶ テスト対戦</button><button data-e="exp">書き出し</button><button data-go="help">遊び方</button></div></div>`;
+  renderGrid();
+  $('#ename').oninput = e => { d.name = e.target.value.slice(0, 12) || '無名'; saveSlots(); };
+}
+function cellHtml(i, d) {
+  if (i === 0) return `<button class="cell f k-start${selCell === 0 ? ' sel' : ''}" data-i="0"><b>START</b><span class="ar d${d.start}">${DIRG[d.start]}</span></button>`;
+  const c = d.cells[i];
+  if (!c) return `<button class="cell${selCell === i ? ' sel' : ''}" data-i="${i}"></button>`;
+  const def = CH[c.t];
+  let ar;
+  if (def.k === 'cond') ar = `<span class="ar y d${c.a}">${DIRG[c.a]}</span><span class="ar n d${c.b}">${DIRG[c.b]}</span>`;
+  else ar = `<span class="ar d${c.a}">${DIRG[c.a]}</span>`;
+  return `<button class="cell f k-${def.k}${selCell === i ? ' sel' : ''}" data-i="${i}"><b>${def.s}</b>${def.f ? `<small>${def.f(c.p)}</small>` : ''}${ar}</button>`;
+}
+function renderGrid() {
+  const g = $('#grid'); if (!g) return;
+  const d = slots[cur];
+  let h = ''; for (let i = 0; i < NC; i++) h += cellHtml(i, d);
+  g.innerHTML = h;
+}
+$('#edit').addEventListener('click', async e => {
+  const cell = e.target.closest('.cell');
+  if (cell) { sfx('tap'); openCell(+cell.dataset.i); return; }
+  const b = e.target.closest('[data-e]'); if (!b) return;
+  const d = slots[cur], v = +b.dataset.v;
+  sfx('tap');
+  switch (b.dataset.e) {
+    case 'slot': cur = v; LS.set('ks.cur', cur); selCell = -1; renderEdit(); break;
+    case 'body': d.body = v; saveSlots(); renderEdit(); break;
+    case 'wpn': d.wpn = v; saveSlots(); renderEdit(); break;
+    case 'col': d.col = v; saveSlots(); renderEdit(); break;
+    case 'clr': if (await confirmBox('全消去', `「${esc(d.name)}」のチップをすべて消します。`, '消す', 'red')) { d.cells = Array(NC).fill(null); saveSlots(); renderGrid(); } break;
+    case 'exp': openExport(d); break;
+    case 'imp': openImportSlot(); break;
+    case 'test': openFree(); break;
+  }
+});
+function openCell(i) {
+  const d = slots[cur];
+  selCell = i; renderGrid();
+  if (i === 0) {
+    openModal(`<h3>START</h3><p class="sub">プログラムはここから始まります。最初に進む方向を選んでください。</p>
+      <div class="dirs">${[0, 1, 2, 3].map(k => `<button data-a="d" data-v="${k}" class="${d.start === k ? 'on' : ''}">${DIRB[k]}</button>`).join('')}</div>
+      <button class="btn ghost" data-a="x">閉じる</button>`, { d: dd => { d.start = +dd.v; saveSlots(); renderGrid(); openCell(0); } });
+    return;
+  }
+  const c = d.cells[i];
+  if (!c) return openPalette(i, false);
+  const def = CH[c.t];
+  const dirRow = (key, cls) => `<div class="dirs ${cls}">${[0, 1, 2, 3].map(k => `<button data-a="dir" data-k="${key}" data-v="${k}" class="${c[key] === k ? 'on' : ''}">${DIRB[k]}</button>`).join('')}</div>`;
+  openModal(`<h3>${def.n}</h3><p class="sub">${def.d}${def.k === 'act' ? '<br>（実行するとその瞬間の行動になります）' : def.k === 'cond' ? '' : '<br>（一瞬で処理して次へ進みます）'}</p>
+    ${def.p ? `<div class="lbl"><span>X の値</span><b id="pv">${def.f(c.p)}</b></div><input type="range" id="pr" min="${def.p[0]}" max="${def.p[1]}" step="${def.p[2]}" value="${c.p}">` : ''}
+    ${def.k === 'cond' ? `<div class="ph" style="color:var(--green)">YES のとき進む方向</div>${dirRow('a', 'y')}<div class="ph" style="color:var(--red)">NO のとき進む方向</div>${dirRow('b', 'n')}`
+      : `<div class="ph">次に進む方向</div>${dirRow('a', '')}`}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn ghost" data-a="chg">種類を変える</button><button class="btn red" data-a="del">削除</button></div>
+    <button class="btn" data-a="x">OK</button>`, {
+    dir: (dd, btn) => { c[dd.k] = +dd.v; saveSlots(); renderGrid(); btn.parentNode.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === btn)); },
+    del: () => { d.cells[i] = null; saveSlots(); closeModal(); selCell = -1; renderGrid(); },
+    chg: () => openPalette(i, true),
+  });
+  const pr = $('#pr'); if (pr) pr.oninput = ev => { c.p = clampP(c.t, ev.target.value); $('#pv').textContent = def.f(c.p); saveSlots(); renderGrid(); };
+}
+function openPalette(i, replace) {
+  const d = slots[cur];
+  openModal(`<h3>チップを選ぶ</h3><p class="sub">マス ${i % GW + 1}-${(i / GW | 0) + 1} に置くチップ</p>
+    ${GROUPS.map(([g, ks]) => `<div class="ph">${g}</div><div class="pal">${ks.map(k => `<button data-a="p" data-k="${k}"><i class="k-${CH[k].k}">${CH[k].s}</i><span>${CH[k].n}<small>${CH[k].d}</small></span></button>`).join('')}</div>`).join('')}
+    <button class="btn ghost" data-a="x">やめる</button>`, {
+    p: dd => {
+      const old = d.cells[i];
+      d.cells[i] = { t: dd.k, p: clampP(dd.k, 0), a: replace && old ? old.a : S, b: replace && old ? old.b : E };
+      saveSlots(); renderGrid(); openCell(i);
+    },
+  });
+}
+
+// ---- export / import ----
+function openExport(d) {
+  const code = encode(d);
+  const link = !inFrame && /^https?:/.test(location.protocol) ? location.href.split('#')[0] + '#vs=' + code : null;
+  openModal(`<h3>書き出し：${esc(d.name)}</h3><p class="sub">このコードを友だちに送ると、相手の「ライバル」に読み込んで対戦できます。（${specOf(d)}・チップ${chipCount(d)}枚）</p>
+    <textarea id="code" readonly>${code}</textarea>
+    <button class="btn" data-a="copy">コードをコピー</button>
+    ${link ? '<button class="btn ghost" data-a="link">対戦リンクをコピー（開くだけで読み込み）</button>' : ''}
+    ${navigator.share ? '<button class="btn ghost" data-a="share">共有…</button>' : ''}
+    <button class="btn ghost" data-a="x">閉じる</button>`, {
+    copy: () => copyText(code, $('#code')),
+    link: () => copyText(link),
+    share: () => { navigator.share({ title: '回路戦機', text: `回路戦機のAI「${d.name}」と対戦しよう！\n${link || code}` }).catch(() => {}); },
+  });
+}
+function openImportSlot() {
+  openModal(`<h3>コードから読み込む</h3><p class="sub">スロット${cur + 1}「${esc(slots[cur].name)}」を、貼り付けたコードの機体で上書きします。</p>
+    <textarea id="icode" placeholder="KS1-..."></textarea><button class="btn" data-a="go">上書きして読み込む</button><button class="btn ghost" data-a="x">やめる</button>`, {
+    go: () => {
+      const d = decode($('#icode').value);
+      if (!d) { toast('コードを読み取れませんでした'); return; }
+      slots[cur] = d; saveSlots(); closeModal(); toast(`「${d.name}」を読み込みました`); renderEdit();
+    },
+  });
+}
+function addRival(code) {
+  const d = decode(code); if (!d) return null;
+  const c = encode(d);
+  const ex = rivals.findIndex(r => r.code === c);
+  if (ex >= 0) return rivals[ex];
+  const r = { code: c, d }; rivals.unshift(r); if (rivals.length > 30) rivals.length = 30; saveRivals(); return r;
+}
+
+// ================= RIVAL PAGE =================
+function renderRival() {
+  show('page');
+  $('#page').innerHTML = `<div class="wrap">
+    <div class="top"><button class="back" data-go="home" aria-label="戻る">←</button><div class="tt">ライバル</div></div>
+    <p class="lead" style="margin-bottom:10px">友だちから届いたコード（KS1-…）を貼り付けて読み込みます。</p>
+    <textarea id="rcode" placeholder="KS1-..."></textarea>
+    <button class="btn" data-r="add">読み込む</button>
+    <div class="sec">読み込んだライバル（${rivals.length}）</div>
+    <div class="list">${rivals.length ? rivals.map((r, i) => `<div class="row"><span class="dotc" style="background:${PAL[r.d.col]}"></span><div class="grow"><b>${esc(r.d.name)}</b><small>${specOf(r.d)}・チップ${chipCount(r.d)}枚</small></div>
+      <button class="mini" data-r="vs" data-i="${i}">対戦</button><button class="mini" data-r="cp" data-i="${i}">中を見る</button><button class="mini red" data-r="del" data-i="${i}">✕</button></div>`).join('')
+      : '<p class="lead" style="font-size:13px">まだいません。工房の「書き出し」でコードを作って、友だちと交換してみよう。</p>'}</div></div>`;
+}
+$('#page').addEventListener('click', async e => {
+  const b = e.target.closest('[data-r],[data-c]'); if (!b) return;
+  sfx('tap');
+  if (b.dataset.c != null) return chalClick(b);
+  const i = +b.dataset.i;
+  switch (b.dataset.r) {
+    case 'add': { const r = addRival($('#rcode').value); if (!r) toast('コードを読み取れませんでした'); else { toast(`ライバル「${r.d.name}」を追加しました`); renderRival(); } break; }
+    case 'vs': openFree({ k: 'rival', i }); break;
+    case 'del': if (await confirmBox('削除', `ライバル「${esc(rivals[i].d.name)}」を消します。`, '消す', 'red')) { rivals.splice(i, 1); saveRivals(); renderRival(); } break;
+    case 'cp': {
+      const r = rivals[i];
+      openModal(`<h3>${esc(r.d.name)} を工房にコピー</h3><p class="sub">どのスロットに入れますか？（元のスロットは上書きされます）</p>
+        <div class="list">${slots.map((s, k) => `<button class="row" data-a="s" data-v="${k}"><div class="grow"><b>${k + 1}. ${esc(s.name)}</b><small>${specOf(s)}・チップ${chipCount(s)}枚</small></div></button>`).join('')}</div>
+        <button class="btn ghost" data-a="x">やめる</button>`, {
+        s: dd => { cur = +dd.v; slots[cur] = sanitize(JSON.parse(JSON.stringify(r.d))); saveSlots(); LS.set('ks.cur', cur); closeModal(); toast('工房にコピーしました'); renderEdit(); },
+      });
+      break;
+    }
+  }
+});
+
+// ================= CHALLENGE =================
+function renderChal() {
+  show('page');
+  $('#page').innerHTML = `<div class="wrap">
+    <div class="top"><button class="back" data-go="home" aria-label="戻る">←</button><div class="tt">チャレンジ</div></div>
+    <div class="sec" style="margin-top:4px">出撃する機体</div>
+    <div class="tabs">${slots.map((s, i) => `<button data-c="slot" data-v="${i}" class="${i === cur ? 'on' : ''}">${i + 1}. ${esc(s.name)}</button>`).join('')}</div>
+    <div class="sec">刺客（1対1）</div>
+    <div class="list">${CPU.map((c, i) => {
+      const lock = i > cleared, done = i < cleared;
+      return `<button class="row" data-c="go" data-v="${i}" ${lock ? 'disabled' : ''}><span class="dotc" style="background:${PAL[c.d.col]}"></span><div class="grow"><b>${i + 1}. ${c.d.name}</b><small>${specOf(c.d)}　${lock ? '？？？' : c.note}</small></div>
+        <span class="st" style="color:${done ? 'var(--green)' : lock ? 'var(--dim)' : 'var(--orange)'}">${done ? 'クリア' : lock ? '🔒' : '挑戦'}</span></button>`;
+    }).join('')}</div>
+    ${cleared >= CPU.length ? '<p class="lead" style="margin-top:14px;text-align:center;color:var(--yellow)">全刺客撃破！ 次は友だちのAIと戦おう。</p>' : ''}</div>`;
+}
+function chalClick(b) {
+  if (b.dataset.c === 'slot') { cur = +b.dataset.v; LS.set('ks.cur', cur); renderChal(); return; }
+  const i = +b.dataset.v;
+  startBattle(slots[cur], CPU[i].d, 1, { chal: i });
+}
+
+// ================= FREE BATTLE =================
+let FB = { opp: { k: 'cpu', i: 2 }, n: 1 };
+function oppDesign(o) { return o.k === 'cpu' ? CPU[o.i]?.d : o.k === 'rival' ? rivals[o.i]?.d : slots[o.i]; }
+function openFree(pre) {
+  if (pre) FB.opp = pre;
+  if (!oppDesign(FB.opp)) FB.opp = { k: 'cpu', i: 0 };
+  const same = (k, i) => FB.opp.k === k && FB.opp.i === i;
+  const row = (k, i, d, sub) => `<button class="row ${same(k, i) ? 'on' : ''}" data-a="o" data-k="${k}" data-v="${i}"><span class="dotc" style="background:${PAL[d.col]}"></span><div class="grow"><b>${esc(d.name)}</b><small>${sub}</small></div></button>`;
+  openModal(`<h3>フリー対戦</h3>
+    <div class="ph">自分の機体</div>
+    <div class="tabs">${slots.map((s, i) => `<button data-a="me" data-v="${i}" class="${i === cur ? 'on' : ''}">${i + 1}. ${esc(s.name)}</button>`).join('')}</div>
+    <div class="ph">機数（同じAIが何機で戦うか）</div>
+    <div class="seg">${[1, 2, 3].map(n => `<button data-a="n" data-v="${n}" class="${FB.n === n ? 'on' : ''}">${n} 対 ${n}</button>`).join('')}</div>
+    ${rivals.length ? `<div class="ph">ライバル</div><div class="list">${rivals.map((r, i) => row('rival', i, r.d, specOf(r.d))).join('')}</div>` : ''}
+    <div class="ph">CPU</div><div class="list">${CPU.map((c, i) => row('cpu', i, c.d, specOf(c.d))).join('')}</div>
+    <div class="ph">自分の機体どうし</div><div class="list">${slots.map((s, i) => row('slot', i, s, specOf(s))).join('')}</div>
+    <button class="btn" data-a="go" style="position:sticky;bottom:0">▶ 対戦開始</button>`, {
+    me: dd => { cur = +dd.v; LS.set('ks.cur', cur); openFree(); },
+    n: dd => { FB.n = +dd.v; openFree(); },
+    o: dd => { FB.opp = { k: dd.k, i: +dd.v }; openFree(); },
+    go: () => { closeModal(); startBattle(slots[cur], oppDesign(FB.opp), FB.n, {}); },
+  });
+}
+
+// ================= BATTLE ENGINE =================
+const AW = 600, AH = 600, BR = 14;
+const OBST = [{ x: 190, y: 205, r: 28 }, { x: 410, y: 395, r: 28 }, { x: 420, y: 190, r: 22 }, { x: 180, y: 410, r: 22 }];
+let BT = null;
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const angN = a => { while (a > PI) a -= 2 * PI; while (a < -PI) a += 2 * PI; return a; };
+const nxt = (i, d) => { const x = i % GW + DX[d], y = (i / GW | 0) + DY[d]; return x < 0 || y < 0 || x >= GW || y >= GH ? 0 : y * GW + x; };
+const rel = (b, e) => angN(Math.atan2(e.y - b.y, e.x - b.x) - b.ang);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+function startBattle(dA, dB, n, opt) {
+  if (!dA || !dB) return;
+  closeModal();
+  const colA = PAL[dA.col], colB = dB.col === dA.col ? PAL[(dB.col + 3) % 6] : PAL[dB.col];
+  const bots = [];
+  const xs = n === 1 ? [300] : n === 2 ? [230, 370] : [180, 300, 420];
+  for (let k = 0; k < n; k++) {
+    for (const [team, d, col, y, ang] of [[0, dA, colA, 545, -PI / 2], [1, dB, colB, 55, PI / 2]]) {
+      const B = BODY[d.body];
+      bots.push({ team, k, d, col, x: team ? AW - xs[k] : xs[k], y, ang, hp: B.hp, max: B.hp, cd: 20, mcd: 30, ammo: MSL.ammo, cnt: 0, pc: 0, hl: 0, alive: true, flash: 0, tgt: null, tread: 0 });
+    }
+  }
+  BT = { bots, shots: [], parts: [], T: 0, over: false, speed: 1, acc: 0, lt: 0, rng: mulberry((Math.random() * 1e9) | 0), dA, dB, n, opt, colA, colB, stop: false, res: null };
+  $('#na').textContent = dA.name + (n > 1 ? ` ×${n}` : ''); $('#na').style.color = colA;
+  $('#nb').textContent = dB.name + (n > 1 ? ` ×${n}` : ''); $('#nb').style.color = colB;
+  $('#ha').style.background = colA; $('#hb').style.background = colB;
+  $('#bspd').textContent = '×1';
+  $('#bat').hidden = false;
+  document.body.style.overflow = 'hidden';
+  sizeCanvas();
+  // monitor
+  const mb = bots[0];
+  $('#mg').innerHTML = Array.from({ length: NC }, (_, i) => {
+    const c = i === 0 ? { t: 'start' } : dA.cells[i];
+    const k = !c ? '' : c.t === 'start' ? 'k-start' : 'k-' + CH[c.t].k;
+    return `<div class="${k}" data-m="${i}"></div>`;
+  }).join('');
+  BT.mcells = [...$('#mg').children]; BT.mhl = -1; BT.mb = mb;
+  cancelAnimationFrame(BT.raf);
+  BT.raf = requestAnimationFrame(loop);
+}
+let CS = 360, DPR = 1;
+function sizeCanvas() {
+  const cv = $('#cv');
+  const avail = Math.min(window.innerWidth - 16, 560, window.innerHeight - 230);
+  CS = Math.max(240, Math.floor(avail));
+  DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+  cv.style.width = CS + 'px'; cv.style.height = CS + 'px';
+  cv.width = Math.round(CS * DPR); cv.height = Math.round(CS * DPR);
+}
+window.addEventListener('resize', () => { if (BT && !$('#bat').hidden) sizeCanvas(); });
+
+function cond(b, c) {
+  const e = b.tgt;
+  switch (c.t) {
+    case 'edist': return !!e && dist(b, e) < c.p;
+    case 'efront': return !!e && Math.abs(rel(b, e)) <= c.p * PI / 180;
+    case 'eleft': return !!e && rel(b, e) < 0;
+    case 'ebul': {
+      const r2 = c.p * c.p;
+      for (const s of BT.shots) {
+        if (s.team === b.team) continue;
+        const dx = b.x - s.x, dy = b.y - s.y;
+        if (dx * dx + dy * dy > r2) continue;
+        if (s.vx * dx + s.vy * dy > 0) return true;
+      }
+      return false;
+    }
+    case 'hp': return b.hp / b.max * 100 <= c.p;
+    case 'ehp': return !!e && e.hp / e.max * 100 <= c.p;
+    case 'wall': {
+      for (let s = 10; s <= c.p; s += 10) {
+        const x = b.x + Math.cos(b.ang) * s, y = b.y + Math.sin(b.ang) * s;
+        if (x < BR || y < BR || x > AW - BR || y > AH - BR) return true;
+        for (const o of OBST) if (Math.hypot(x - o.x, y - o.y) < o.r + BR) return true;
+      }
+      return false;
+    }
+    case 'ammo': return b.ammo > 0;
+    case 'ready': return b.cd <= 0;
+    case 'cnt': return b.cnt >= c.p;
+    case 'rnd': return BT.rng() * 100 < c.p;
+  }
+  return false;
+}
+function mv(b, a, s) { b.x += Math.cos(a) * s; b.y += Math.sin(a) * s; b.tread += s; }
+function act(b, t) {
+  const B = BODY[b.d.body];
+  switch (t) {
+    case 'fwd': mv(b, b.ang, B.spd); break;
+    case 'back': mv(b, b.ang + PI, B.spd * 0.7); break;
+    case 'sl': mv(b, b.ang - PI / 2, B.spd * 0.85); break;
+    case 'sr': mv(b, b.ang + PI / 2, B.spd * 0.85); break;
+    case 'tl': b.ang = angN(b.ang - B.turn); break;
+    case 'tr': b.ang = angN(b.ang + B.turn); break;
+    case 'aim': if (b.tgt) b.ang = angN(b.ang + clamp(rel(b, b.tgt), -B.turn, B.turn)); break;
+  }
+}
+function weapon(b, t) {
+  const ca = Math.cos(b.ang), sa = Math.sin(b.ang);
+  if (t === 'fire') {
+    if (b.cd > 0) return;
+    const Wp = WPN[b.d.wpn]; b.cd = Wp.cd;
+    for (let k = 0; k < Wp.k; k++) {
+      const a = b.ang + (BT.rng() - 0.5) * 2 * Wp.spr;
+      BT.shots.push({ m: 0, team: b.team, x: b.x + ca * 18, y: b.y + sa * 18, vx: Math.cos(a) * Wp.sp, vy: Math.sin(a) * Wp.sp, life: Wp.life, dmg: Wp.dmg, col: b.col, big: b.d.wpn === 1 });
+    }
+    BT.parts.push({ x: b.x + ca * 20, y: b.y + sa * 20, vx: ca, vy: sa, life: 4, max: 4, col: '#fff6c8', r: b.d.wpn === 1 ? 7 : 4 });
+    sfx(b.d.wpn === 1 ? 'big' : 'shot');
+  } else if (t === 'msl') {
+    if (b.ammo <= 0 || b.mcd > 0) return;
+    b.ammo--; b.mcd = MSL.cd;
+    BT.shots.push({ m: 1, team: b.team, x: b.x - ca * 4, y: b.y - sa * 4, ang: b.ang, vx: ca * MSL.sp, vy: sa * MSL.sp, life: MSL.life, dmg: MSL.dmg, col: b.col, tgt: b.tgt });
+    sfx('msl');
+  }
+}
+function think(b) {
+  const P = b.d;
+  for (let steps = 0; steps < 24; steps++) {
+    const i = b.pc;
+    if (i === 0) { b.pc = nxt(0, P.start); continue; }
+    const c = P.cells[i];
+    if (!c) { b.pc = 0; continue; }
+    const k = CH[c.t].k;
+    if (k === 'cond') { b.pc = nxt(i, cond(b, c) ? c.a : c.b); continue; }
+    b.pc = nxt(i, c.a);
+    if (k === 'act') { b.hl = i; act(b, c.t); return; }
+    if (k === 'wpn') weapon(b, c.t);
+    else if (c.t === 'cset') b.cnt = 0;
+    else if (c.t === 'cinc') b.cnt = Math.min(9999, b.cnt + 1);
+  }
+  b.hl = -1; // 動作に行き着かなかった（待機扱い）
+}
+function nearestFoe(b) {
+  let best = null, bd = 1e9;
+  for (const o of BT.bots) if (o.alive && o.team !== b.team) { const d = dist(b, o); if (d < bd) { bd = d; best = o; } }
+  return best;
+}
+function burst(x, y, col, n, sp, life, r) {
+  for (let k = 0; k < n; k++) {
+    const a = Math.random() * 2 * PI, v = Math.random() * sp;
+    BT.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: life * (0.5 + Math.random() * 0.5), max: life, col, r: r * (0.6 + Math.random() * 0.6) });
+  }
+  if (BT.parts.length > 500) BT.parts.splice(0, BT.parts.length - 500);
+}
+function damage(b, dmg, x, y) {
+  b.hp -= dmg; b.flash = 4;
+  burst(x, y, '#ffe9a8', 4, 2.2, 10, 2);
+  if (b.hp <= 0 && b.alive) {
+    b.hp = 0; b.alive = false;
+    burst(b.x, b.y, '#ff9a3d', 34, 4.5, 34, 5); burst(b.x, b.y, '#fff2c0', 14, 2.5, 22, 4);
+    sfx('boom');
+  } else sfx('hit');
+}
+function tick() {
+  const bt = BT; bt.T++;
+  const alive = bt.bots.filter(b => b.alive);
+  for (const b of alive) { b.tgt = nearestFoe(b); if (b.cd > 0) b.cd--; if (b.mcd > 0) b.mcd--; if (b.flash > 0) b.flash--; }
+  const order = bt.T % 2 ? alive : alive.slice().reverse();
+  for (const b of order) think(b);
+  // 衝突
+  for (const b of alive) {
+    b.x = clamp(b.x, BR, AW - BR); b.y = clamp(b.y, BR, AH - BR);
+    for (const o of OBST) {
+      const dx = b.x - o.x, dy = b.y - o.y, d = Math.hypot(dx, dy) || 1, m = o.r + BR;
+      if (d < m) { b.x = o.x + dx / d * m; b.y = o.y + dy / d * m; }
+    }
+  }
+  for (let i = 0; i < alive.length; i++) for (let j = i + 1; j < alive.length; j++) {
+    const a = alive[i], c = alive[j], dx = c.x - a.x, dy = c.y - a.y, d = Math.hypot(dx, dy) || 1;
+    if (d < BR * 2) { const p = (BR * 2 - d) / 2; a.x -= dx / d * p; a.y -= dy / d * p; c.x += dx / d * p; c.y += dy / d * p; }
+  }
+  // 弾
+  const keep = [];
+  for (const s of bt.shots) {
+    if (s.m) {
+      if (!s.tgt || !s.tgt.alive) { let best = null, bd = 1e9; for (const o of bt.bots) if (o.alive && o.team !== s.team) { const d = Math.hypot(o.x - s.x, o.y - s.y); if (d < bd) { bd = d; best = o; } } s.tgt = best; }
+      if (s.tgt) { const want = Math.atan2(s.tgt.y - s.y, s.tgt.x - s.x); s.ang = angN(s.ang + clamp(angN(want - s.ang), -MSL.turn, MSL.turn)); }
+      s.vx = Math.cos(s.ang) * MSL.sp; s.vy = Math.sin(s.ang) * MSL.sp;
+      if (bt.T % 2) bt.parts.push({ x: s.x, y: s.y, vx: -s.vx * 0.1, vy: -s.vy * 0.1, life: 16, max: 16, col: 'rgba(200,210,220,.7)', r: 3 });
+    }
+    s.x += s.vx; s.y += s.vy; s.life--;
+    let dead = s.life <= 0 || s.x < 0 || s.y < 0 || s.x > AW || s.y > AH;
+    if (!dead) for (const o of OBST) if (Math.hypot(s.x - o.x, s.y - o.y) < o.r) { dead = true; burst(s.x, s.y, '#9fb3c8', 3, 1.5, 8, 1.5); break; }
+    if (!dead) for (const b of bt.bots) {
+      if (!b.alive || b.team === s.team) continue;
+      if (Math.hypot(b.x - s.x, b.y - s.y) < BR + (s.m ? 4 : 2.5)) { damage(b, s.dmg, s.x, s.y); if (s.m) burst(s.x, s.y, '#ff8a3d', 12, 3, 18, 3.5); dead = true; break; }
+    }
+    if (!dead) keep.push(s);
+  }
+  bt.shots = keep;
+  stepParts();
+  const aA = bt.bots.some(b => b.alive && b.team === 0), aB = bt.bots.some(b => b.alive && b.team === 1);
+  if (!aA || !aB || bt.T >= LIMIT) endBattle(aA, aB);
+}
+function stepParts() {
+  const ps = BT.parts;
+  for (const p of ps) { p.x += p.vx; p.y += p.vy; p.vx *= 0.92; p.vy *= 0.92; p.life--; }
+  BT.parts = ps.filter(p => p.life > 0);
+}
+const teamHp = t => { const bs = BT.bots.filter(b => b.team === t); return bs.reduce((s, b) => s + Math.max(0, b.hp) / b.max, 0) / bs.length; };
+function endBattle(aA, aB) {
+  const bt = BT; if (bt.over) return;
+  bt.over = true;
+  let r;
+  if (aA && !aB) r = 'win'; else if (!aA && aB) r = 'lose'; else if (!aA && !aB) r = 'draw';
+  else { const d = teamHp(0) - teamHp(1); r = Math.abs(d) < 0.02 ? 'draw' : d > 0 ? 'win' : 'lose'; }
+  bt.res = r;
+  if (r === 'win' && bt.opt.chal != null && bt.opt.chal === cleared) { cleared++; LS.set('ks.clear', cleared); bt.newClear = true; }
+  setTimeout(() => { if (BT === bt && !bt.stop) showResult(); }, 1100);
+}
+function showResult() {
+  const bt = BT, r = bt.res;
+  sfx(r === 'win' ? 'win' : r === 'lose' ? 'lose' : 'tap');
+  const sec = (bt.T / 30).toFixed(1);
+  const hpA = Math.round(teamHp(0) * 100), hpB = Math.round(teamHp(1) * 100);
+  const ch = bt.opt.chal;
+  const nextOk = ch != null && r === 'win' && ch + 1 < CPU.length;
+  openModal(`<div class="res" style="color:${r === 'win' ? 'var(--cyan)' : r === 'lose' ? 'var(--red)' : 'var(--yellow)'}">${r === 'win' ? 'WIN' : r === 'lose' ? 'LOSE' : 'DRAW'}</div>
+    <p class="sub" style="text-align:center">${bt.T >= LIMIT ? '時間切れ（残りHPで判定）' : sec + '秒で決着'}<br>
+    <b style="color:${bt.colA}">${esc(bt.dA.name)}</b> 残りHP ${hpA}%　／　<b style="color:${bt.colB}">${esc(bt.dB.name)}</b> 残りHP ${hpB}%
+    ${bt.newClear ? `<br><b style="color:var(--yellow)">${ch + 1 < CPU.length ? `刺客${ch + 1}「${CPU[ch].d.name}」撃破！ 次の刺客が現れた。` : '全刺客撃破！ おめでとう！'}</b>` : ''}</p>
+    ${nextOk ? '<button class="btn" data-a="next">次の刺客へ</button>' : ''}
+    <button class="btn ${nextOk ? 'ghost' : ''}" data-a="again">もう一度</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn ghost" data-a="edit">工房で直す</button><button class="btn ghost" data-a="home">${ch != null ? 'チャレンジ一覧' : 'ホーム'}</button></div>`, {
+    next: () => { startBattle(slots[cur], CPU[ch + 1].d, 1, { chal: ch + 1 }); },
+    again: () => { startBattle(bt.dA, bt.dB, bt.n, bt.opt); },
+    edit: () => { quitBattle(); renderEdit(); },
+    home: () => { quitBattle(); ch != null ? renderChal() : renderHome(); },
+  }, false);
+}
+function quitBattle() {
+  if (BT) { BT.stop = true; cancelAnimationFrame(BT.raf); }
+  closeModal();
+  $('#bat').hidden = true; document.body.style.overflow = '';
+}
+$('#bquit').onclick = () => { sfx('tap'); const ch = BT && BT.opt.chal; quitBattle(); ch != null ? renderChal() : $('#edit').hidden && $('#page').hidden ? renderHome() : null; };
+$('#bspd').onclick = () => { if (!BT) return; BT.speed = BT.speed === 1 ? 2 : BT.speed === 2 ? 4 : 1; $('#bspd').textContent = '×' + BT.speed; };
+$('#bskip').onclick = () => { if (!BT || BT.over) return; let n = 0; while (!BT.over && n++ < LIMIT + 10) tick(); };
+
+function loop(ts) {
+  const bt = BT; if (!bt || bt.stop) return;
+  const dt = Math.min(100, bt.lt ? ts - bt.lt : 16); bt.lt = ts;
+  if (!bt.over) {
+    bt.acc += dt * bt.speed;
+    let n = 0;
+    while (bt.acc >= 1000 / 30 && n < 40) { tick(); bt.acc -= 1000 / 30; n++; if (bt.over) break; }
+  } else stepParts();
+  draw(); hud();
+  bt.raf = requestAnimationFrame(loop);
+}
+function hud() {
+  const bt = BT;
+  $('#tm').textContent = Math.max(0, Math.ceil((LIMIT - bt.T) / 30));
+  $('#ha').style.width = (teamHp(0) * 100) + '%'; $('#hb').style.width = (teamHp(1) * 100) + '%';
+  const b = bt.mb;
+  if (b.hl !== bt.mhl) { if (bt.mhl >= 0) bt.mcells[bt.mhl].classList.remove('hl'); if (b.hl >= 0) bt.mcells[b.hl].classList.add('hl'); bt.mhl = b.hl; }
+  const c = b.hl > 0 ? b.d.cells[b.hl] : null;
+  $('#ms').innerHTML = `<b style="color:${bt.colA}">${esc(b.d.name)}${bt.n > 1 ? ' 1号機' : ''}</b>　${b.alive ? '' : '<span style="color:var(--red)">撃破</span>'}<br>
+    実行中：<b>${b.alive ? (c ? CH[c.t].n : '（動作なし）') : '―'}</b><br>HP <b>${Math.ceil(Math.max(0, b.hp))}</b>/${b.max}　ミサイル <b>${b.ammo}</b><br>カウンタ <b>${b.cnt}</b>　主砲 ${b.cd > 0 ? '装填中' : '<b style="color:var(--green)">OK</b>'}`;
+}
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function draw() {
+  const bt = BT, cv = $('#cv'), ctx = cv.getContext('2d');
+  const sc = CS / AW * DPR;
+  ctx.setTransform(sc, 0, 0, sc, 0, 0);
+  ctx.fillStyle = '#0f151d'; ctx.fillRect(0, 0, AW, AH);
+  ctx.strokeStyle = 'rgba(55,208,255,.07)'; ctx.lineWidth = 1;
+  ctx.beginPath(); for (let g = 50; g < AW; g += 50) { ctx.moveTo(g, 0); ctx.lineTo(g, AH); ctx.moveTo(0, g); ctx.lineTo(AW, g); } ctx.stroke();
+  ctx.strokeStyle = 'rgba(55,208,255,.35)'; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, AW - 3, AH - 3);
+  for (const o of OBST) {
+    const g = ctx.createRadialGradient(o.x - o.r * 0.3, o.y - o.r * 0.3, 2, o.x, o.y, o.r);
+    g.addColorStop(0, '#4a5a6e'); g.addColorStop(1, '#232d3a');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(160,190,220,.3)'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  // 残骸
+  for (const b of bt.bots) if (!b.alive) {
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.ang);
+    ctx.fillStyle = '#1c232c'; rr(ctx, -13, -11, 26, 22, 5); ctx.fill(); ctx.strokeStyle = '#333e4b'; ctx.stroke(); ctx.restore();
+  }
+  for (const p of bt.parts) { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  for (const b of bt.bots) if (b.alive) {
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.ang);
+    ctx.fillStyle = '#0b0f14';
+    const tr = (b.tread | 0) % 6;
+    rr(ctx, -14, -14, 28, 6, 2); ctx.fill(); rr(ctx, -14, 8, 28, 6, 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; for (let x = -12 + tr; x < 12; x += 6) { ctx.fillRect(x, -13, 2, 4); ctx.fillRect(x, 9, 2, 4); }
+    ctx.fillStyle = b.col; rr(ctx, -12, -9, 24, 18, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; rr(ctx, -12, 2, 24, 7, 3); ctx.fill();
+    ctx.fillStyle = '#e8eef5'; const bl = b.d.wpn === 1 ? 20 : b.d.wpn === 2 ? 14 : 17, bw = b.d.wpn === 1 ? 5 : b.d.wpn === 2 ? 6 : 3;
+    ctx.fillRect(2, -bw / 2, bl, bw);
+    ctx.fillStyle = '#0f151d'; ctx.beginPath(); ctx.arc(0, 0, 6.5, 0, 7); ctx.fill();
+    ctx.fillStyle = b.col; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, 7); ctx.fill();
+    if (b.flash) { ctx.fillStyle = 'rgba(255,255,255,.7)'; rr(ctx, -14, -14, 28, 28, 6); ctx.fill(); }
+    ctx.restore();
+    // HP・ラベル
+    const w = 30, f = Math.max(0, b.hp / b.max);
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(b.x - w / 2, b.y - 25, w, 4);
+    ctx.fillStyle = f > 0.5 ? '#4fe08a' : f > 0.25 ? '#ffd23f' : '#ff5566'; ctx.fillRect(b.x - w / 2, b.y - 25, w * f, 4);
+    if (bt.n > 1) { ctx.fillStyle = b.col; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText((b.team ? 'B' : 'A') + (b.k + 1), b.x, b.y + 29); }
+  }
+  for (const s of bt.shots) {
+    if (s.m) {
+      ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.ang);
+      ctx.fillStyle = '#e8eef5'; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-5, -3); ctx.lineTo(-5, 3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ff8a3d'; ctx.beginPath(); ctx.arc(-6, 0, 2.5 + Math.random() * 1.5, 0, 7); ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.fillStyle = s.col; ctx.shadowColor = s.col; ctx.shadowBlur = 6;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.big ? 4.5 : 2.5, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+    }
+  }
+}
+
+// ================= BOOT =================
+function boot() {
+  const h = location.hash;
+  if (h.startsWith('#vs=')) {
+    const r = addRival(decodeURIComponent(h.slice(4)));
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    if (r) { renderRival(); toast(`ライバル「${r.d.name}」が挑戦状を持ってきた！`, 3200); return; }
+    toast('リンクのコードを読み取れませんでした');
+  }
+  renderHome();
+}
+boot();
+window.__ks = { get BT() { return BT; }, tick, CPU, slots, encode, decode, startBattle };
+})();
+</script>
