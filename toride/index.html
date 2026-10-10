@@ -114,7 +114,7 @@
   <div class="hud" id="hud">
     <div class="stats">
       <div class="stat"><small>WAVE</small><span id="wave">1</span></div>
-      <div class="stat" id="wall"><small>城壁</small><span id="wallN">20</span></div>
+      <div class="stat" id="wall"><small>城壁</small><span id="wallN">30</span></div>
       <div class="stat" id="coins"><small>コイン</small><span id="coinN">40</span></div>
     </div>
     <div class="preview" id="preview"></div>
@@ -181,7 +181,7 @@
     runner: { name: '俊足', col: '#ffb13b', hp: 13, spd: 1.5, armor: 0, coin: 1, hit: 1, r: 0.24 },
     swarm:  { name: '群れ', col: '#c08cff', hp: 9, spd: 0.9, armor: 0, coin: 1, hit: 1, r: 0.2 },
     tank:   { name: '重装', col: '#9aa6b8', hp: 85, spd: 0.45, armor: 4, coin: 3, hit: 2, r: 0.34 },
-    boss:   { name: 'ボス', col: '#ff4f6d', hp: 750, spd: 0.27, armor: 6, coin: 25, hit: 10, r: 0.46 }
+    boss:   { name: 'ボス', col: '#ff4f6d', hp: 600, spd: 0.27, armor: 6, coin: 25, hit: 10, r: 0.46 }
   };
   const lvMul = lv => Math.pow(2.1, lv - 1);
 
@@ -210,7 +210,7 @@
   }
 
   function reset() {
-    wave = 1; wall = 20; coins = 40; summons = 0;
+    wave = 1; wall = 30; coins = 55; summons = 0;
     grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
     enemies = []; shots = []; fx = []; queue = []; mods = newMods(); perkCount = {};
     selected = null; drag = null;
@@ -226,7 +226,7 @@
     if (w >= 2) pool.push('runner');
     if (w >= 3) pool.push('swarm');
     if (w >= 4) pool.push('tank');
-    const n = 6 + Math.floor(w * 2.2);
+    const n = 6 + Math.floor(w * 1.8);
     plan = [];
     for (let i = 0; i < n; i++) {
       let tp = pool[Math.floor(Math.random() * pool.length)];
@@ -240,7 +240,7 @@
   function startWave() {
     if (state !== 'build') return;
     state = 'wave';
-    const gap = Math.max(0.32, 1.0 - wave * 0.03);
+    const gap = Math.max(0.4, 1.0 - wave * 0.025);
     queue = []; let at = 0.4;
     for (const tp of plan) {
       const lane = Math.floor(Math.random() * COLS);
@@ -253,15 +253,15 @@
 
   function spawn(tp, lane) {
     const b = ENEMIES[tp];
-    const hpMul = Math.pow(1.17, wave - 1) * (1 + Math.max(0, wave - 10) * 0.04);
+    const hpMul = Math.pow(1.13, wave - 1) * (1 + Math.max(0, wave - 12) * 0.03);
     const hp = Math.round(b.hp * hpMul);
-    enemies.push({ tp, x: lane + 0.5 + (Math.random() - 0.5) * 0.3, y: -0.4, hp, max: hp, spd: b.spd, armor: b.armor + Math.floor(wave / 8), slowT: 0, slowA: 0, flash: 0, wob: Math.random() * 6 });
+    enemies.push({ tp, x: lane + 0.5 + (Math.random() - 0.5) * 0.3, y: -0.4, hp, max: hp, spd: b.spd, armor: b.armor + Math.floor(wave / 10), slowT: 0, slowA: 0, flash: 0, wob: Math.random() * 6 });
   }
 
   function endWave() {
     let goldInc = 0;
     eachUnit(u => { if (u.type === 'gold') goldInc += Math.round(5 * Math.pow(2, u.lv - 1) * mods.gold); });
-    const base = 8 + wave * 2, intr = Math.floor(coins * mods.interest);
+    const base = 10 + wave * 3, intr = Math.floor(coins * mods.interest);
     coins += base + goldInc + intr;
     const parts = [`基本 +${base}`];
     if (goldInc) parts.push(`金鉱 +${goldInc}`);
@@ -300,7 +300,7 @@
 
   // ---------- units ----------
   function eachUnit(f) { for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c]) f(grid[r][c], r, c); }
-  const cost = () => Math.round((10 + summons * 3) * mods.cost);
+  const cost = () => Math.round((10 + summons * 2) * mods.cost);
   const unitPos = (r, c) => ({ x: c + 0.5, y: BOARDY + r + 0.5 });
   const sellValue = u => Math.round(5 * Math.pow(2, u.lv - 1));
   function stat(u) {
