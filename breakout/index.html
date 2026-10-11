@@ -54,20 +54,20 @@
   <canvas id="c"></canvas>
   <div class="hud">
     <div class="l"><small>SCORE</small><b id="score">0</b></div>
-    <div class="r"><small id="lvl">STAGE 1</small><b id="lives">●●●</b></div>
+    <div class="r"><small id="lvl">LV 1</small><b id="lives">● ×0</b></div>
   </div>
   <button id="pause" type="button" aria-label="一時停止">II</button>
 
   <div class="panel" id="pTitle">
     <h1>PRISM<br>BREAK</h1>
-    <p>ブロックのHPも、こちらの攻撃力も、ステージごとに桁が増えていく。クリアのたびに強化を1つ選ぼう。</p>
+    <p>壁は止まらず降りてくる。ボールは自動で撃ち続けるので、指でパドルを動かして狙い、拾い、押し返そう。赤いラインに届いたら終了。</p>
     <div class="legend">
+      <span><b style="background:#ffffff">＋</b>壊すとボール+3</span>
       <span><b style="background:#7ef0c9">×2</b>ボールが倍に</span>
       <span><b style="background:#ffd36e">FEVER</b>ダメージ5倍</span>
-      <span><b style="background:#ff8fb1">LASER</b>連射レーザー</span>
-      <span><b style="background:#ffb36b">FIRE</b>全貫通</span>
       <span><b style="background:#ff6b6b">BOMB</b>全体に大ダメージ</span>
-      <span><b style="background:#8fb4ff">WIDE</b>パドル拡大</span>
+      <span><b style="background:#ffb36b">FIRE</b>全貫通</span>
+      <span><b style="background:#ff8fb1">LASER</b>連射レーザー</span>
     </div>
     <button type="button" id="startBtn">PLAY</button>
   </div>
@@ -76,7 +76,7 @@
     <button type="button" id="resumeBtn">RESUME</button>
   </div>
   <div class="panel" id="pPick" hidden>
-    <h2 id="pickTitle">STAGE CLEAR</h2>
+    <h2 id="pickTitle">LEVEL UP</h2>
     <p id="pickSub">強化を1つ選ぶ</p>
     <div class="cards" id="cards"></div>
   </div>
@@ -100,8 +100,9 @@
 
   // ---------- logical playfield ----------
   const LW = 400, LH = 720;
-  const COLS = 10, BW = 36, BH = 16, GAP = 3, BX0 = (LW - (COLS * BW + (COLS - 1) * GAP)) / 2, BY0 = 96;
-  const MAXB = 80;
+  const COLS = 20, BW = 18, BH = 10, GAP = 1.5, CW = BW + GAP, RH = BH + GAP, BX0 = (LW - (COLS * BW + (COLS - 1) * GAP)) / 2;
+  const TOP = 66, PADY = LH - 70, DANGER = PADY - 46, FILL = 340;
+  const MAXB = 150;
   let scale = 1, dpr = 1;
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -122,92 +123,75 @@
     return (v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)) + UNITS[e - 1];
   }
 
-  // ---------- levels ----------
-  // . empty, 1-3 hp tier, S steel, X explosive, ? item brick
-  const LEVELS = [
-    ['..........', '.11111111.', '.12222221.', '.11?11?11.', '.11111111.'],
-    ['1111111111', '1222222221', '1.?....?.1', '1222222221', '1111111111'],
-    ['....11....', '...1221...', '..123321..', '.1?3XX3?1.', '..123321..', '...1221...', '....11....'],
-    ['2.2.2.2.2.', '.1.1.1.1.1', '2.2.X.2.2.', '.1.1.1.1.1', '2.2.2.2.2.', 'SS..??..SS'],
-    ['1111111111', 'S22222222S', '1.3X..X3.1', 'S22222222S', '1111?11111', '...SSSS...'],
-    ['X1X1X1X1X1', '1212121212', '2323232323', '?........?', '3333333333', 'SS.SSSS.SS'],
-    ['.3......3.', '323....323', '.3?....?3.', '...2112...', '..2XXXX2..', '...2112...', 'S........S'],
-    ['3333333333', '3S.X??X.S3', '3S......S3', '3SSS22SSS3', '2222222222', '1111111111']
-  ];
-  const COLORS = { 1: ['#7ef0c9', '#4cc9a6'], 2: ['#8fb4ff', '#5b82e6'], 3: ['#ff8fb1', '#e0608a'], S: ['#b9bfd6', '#7d839c'], X: ['#ffb36b', '#f07a2b'], '?': ['#ffd36e', '#e8ae2f'] };
-  const TIER = { 1: 1, 2: 2, 3: 4, X: 1, '?': 2 };
-
-  function genLevel(n) {
-    // procedural stage past the handmade ones
-    const rows = 6 + Math.min(4, Math.floor(n / 4));
-    const out = [];
-    const sym = Math.random() < 0.7;
-    for (let r = 0; r < rows; r++) {
-      let row = '';
-      for (let c = 0; c < (sym ? 5 : 10); c++) {
-        const x = Math.random();
-        const hp = Math.min(3, 1 + Math.floor(Math.random() * (1 + n / 5)));
-        row += x < 0.1 ? '.' : x < 0.17 ? 'X' : x < 0.23 ? '?' : x < Math.min(0.33, 0.26 + n * 0.003) ? 'S' : String(hp);
-      }
-      out.push(sym ? row + [...row].reverse().join('') : row);
-    }
-    return out;
-  }
-
   // ---------- state ----------
-  let state = 'title', score = 0, best = store.get('pb2.best', 0), lives = 3, stage = 0;
-  let bricks = [], balls = [], items = [], lasers = [], parts = [], floats = [], queue = [];
-  let pad, combo = 0, comboT = 0, shake = 0, effects = {}, flashT = 0, t = 0, maxHit = 0;
-  let ups = {};
+  // kinds: 1-3 hp tier, P ball brick (+3 balls), X explosive, ? item brick
+  const COLORS = { 1: '#5fd9b3', 2: '#7fa4f5', 3: '#f57fa3', P: '#ffffff', X: '#ffa24d', '?': '#ffd36e' };
+  const TIER = { 1: 1, 2: 2, 3: 4, P: 1, X: 1, '?': 2 };
+  let state = 'title', score = 0, best = store.get('pb3.best', 0);
+  let rows = [], topY = TOP, depth = 0, band = null;
+  let balls = [], items = [], lasers = [], parts = [], floats = [], queue = [];
+  let pad = { x: LW / 2, y: PADY, w: 80, h: 12, tw: 80 };
+  let shake = 0, effects = {}, flashT = 0, t = 0, time = 0, maxHit = 0, broken = 0, fireT = 0;
+  let ups = {}, level = 0, xp = 0, need = 20, pending = 0, pickAt = 0, lvCd = 0;
 
   // ---------- inflation curve ----------
-  const hpScale = () => 10 * Math.pow(1.75, stage);
-  const atk = () => 10 * Math.pow(1.4, stage) * Math.pow(2, ups.pow || 0) * Math.pow(5, ups.mega || 0);
+  const HPG = 1.03, LVCD = 5;
+  const rowHp = d => 10 * Math.pow(HPG, d);
+  const atk = () => 10 * Math.pow(1.25, level) * Math.pow(2, ups.pow || 0) * Math.pow(5, ups.mega || 0);
   const critRate = () => 0.05 + 0.15 * (ups.crit || 0);
   const critMult = () => 3 + 2 * (ups.crit || 0);
-  const comboMult = () => 1 + Math.floor(combo / 5) * 0.5 * Math.pow(2, ups.combo || 0);
-  const padBase = () => 76 + 18 * (ups.wide || 0);
+  const padBase = () => 80 + 18 * (ups.wide || 0);
+  const fireIv = () => 0.34 / (1 + 0.4 * (ups.rate || 0));
+  const SPEED = 6.4;
   function rollDmg(k = 1) {
     const crit = Math.random() < critRate();
     return { v: atk() * k * (crit ? critMult() : 1) * (effects.fever ? 5 : 1), crit };
   }
 
-  function buildStage() {
-    const map = stage < LEVELS.length ? LEVELS[stage] : genLevel(stage);
-    const sc = hpScale();
-    bricks = []; queue = [];
-    map.forEach((row, r) => [...row].forEach((ch, c) => {
-      if (ch === '.') return;
-      const hp = ch === 'S' ? Infinity : Math.round(TIER[ch] * sc);
-      bricks.push({ x: BX0 + c * (BW + GAP), y: BY0 + r * (BH + GAP), w: BW, h: BH, kind: ch, hp, max: hp, hit: 0, born: (r * 10 + c) * 0.012 });
-    }));
-    resetBall();
+  // ---------- endless wall ----------
+  function genRow() {
+    if (!band || band.left <= 0) {
+      const styles = ['full', 'full', 'holes', 'pillars', 'checker', 'gate'];
+      band = { style: styles[Math.floor(Math.random() * styles.length)], left: 3 + Math.floor(Math.random() * 5), tier: 1 + Math.floor(Math.random() * Math.min(3, 1 + depth / 25)), off: Math.floor(Math.random() * 5) };
+    }
+    band.left--;
+    const hp0 = rowHp(depth), cells = new Array(COLS).fill(null);
+    let n = 0;
+    for (let c = 0; c < COLS; c++) {
+      const s = band.style;
+      if (s === 'holes' && Math.random() < 0.16) continue;
+      if (s === 'pillars' && (c + band.off) % 5 === 0) continue;
+      if (s === 'checker' && (c + depth) % 2 === 0 && Math.random() < 0.6) continue;
+      if (s === 'gate' && Math.abs(c - 9.5 - (band.off - 2) * 3) < 1.6) continue;
+      const x = Math.random();
+      const kind = x < 0.045 ? 'P' : x < 0.075 ? 'X' : x < 0.09 ? '?' : String(Math.min(3, band.tier + (Math.random() < 0.18 ? 1 : 0)));
+      const hp = Math.round(TIER[kind] * hp0);
+      cells[c] = { kind, hp, max: hp, hitT: 0 }; n++;
+    }
+    depth++;
+    return { cells, n };
   }
-  function resetBall() {
-    items = []; lasers = []; effects = {};
-    const w = padBase();
-    pad = { x: pad ? pad.x : LW / 2, y: LH - 70, w, h: 12, tw: w };
-    balls = [];
-    const n = 1 + 2 * (ups.ball || 0);
-    for (let i = 0; i < n; i++) balls.push({ x: pad.x, y: pad.y - 12, vx: 0, vy: 0, r: 6, stuck: true, trail: [] });
-    combo = 0;
-  }
+  const bottom = () => topY + rows.length * RH;
   function newGame() {
-    score = 0; lives = 3; stage = 0; ups = {}; maxHit = 0; buildStage(); hud();
+    score = 0; depth = 0; band = null; rows = []; topY = TOP; ups = {}; level = 0; xp = 0; need = 20; pending = 0; lvCd = 0;
+    maxHit = 0; broken = 0; time = 0; fireT = 0; effects = {};
+    balls = []; items = []; lasers = []; parts = []; floats = []; queue = [];
+    pad = { x: LW / 2, y: PADY, w: 80, h: 12, tw: 80 };
+    for (let i = 0; i < 22; i++) rows.unshift(genRow());
+    hud();
   }
-  const baseSpeed = () => Math.min(7.2, 4.8 + stage * 0.15);
 
   function hud() {
     $('score').textContent = fmt(score);
-    $('lvl').textContent = `STAGE ${stage + 1} · ATK ${fmt(atk() * (effects.fever ? 5 : 1))}`;
-    $('lives').textContent = '●'.repeat(Math.max(0, Math.min(lives, 8))) || '—';
+    $('lvl').textContent = `LV ${level + 1} · ATK ${fmt(atk() * (effects.fever ? 5 : 1))}`;
+    $('lives').textContent = `● ×${balls.length}`;
   }
 
   // ---------- audio ----------
   let ac = null, tones = 0;
   function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch {} } if (ac?.state === 'suspended') ac.resume(); }
   function tone(f, d = 0.08, type = 'sine', v = 0.12, slide = 0) {
-    if (!ac || tones > 3) return;
+    if (!ac || tones > 2) return;
     tones++;
     const t0 = ac.currentTime, o = ac.createOscillator(), gn = ac.createGain();
     o.type = type; o.frequency.setValueAtTime(f, t0);
@@ -225,32 +209,15 @@
   const stageEl = $('stage');
   stageEl.addEventListener('pointerdown', e => {
     if (e.target.closest('button') || state !== 'play') return;
-    audio(); pointerX = toLocal(e); launch();
+    audio(); pointerX = toLocal(e);
   });
   stageEl.addEventListener('pointermove', e => { if (state === 'play') pointerX = toLocal(e); });
   const keys = {};
   window.addEventListener('keydown', e => {
     keys[e.code] = true;
-    if (e.code === 'Space' && state === 'play') { e.preventDefault(); launch(); }
     if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
   });
   window.addEventListener('keyup', e => { keys[e.code] = false; });
-  function launch() {
-    const st = balls.filter(b => b.stuck);
-    st.forEach((b, i) => {
-      b.stuck = false;
-      const a = -Math.PI / 2 + (i - (st.length - 1) / 2) * 0.2 + (Math.random() - 0.5) * 0.3, s = baseSpeed();
-      b.vx = Math.cos(a) * s; b.vy = Math.sin(a) * s;
-    });
-    if (st.length) tone(660, 0.06, 'triangle', 0.1);
-  }
-  function fireLaser() {
-    const iv = effects.laser ? 0.14 : Math.max(0.16, 0.7 / (ups.laser || 1));
-    if (t - (pad.lastShot || 0) < iv) return;
-    pad.lastShot = t;
-    lasers.push({ x: pad.x - pad.w / 2 + 6, y: pad.y - 4 }, { x: pad.x + pad.w / 2 - 6, y: pad.y - 4 });
-    tone(1200, 0.05, 'square', 0.03, 0.5);
-  }
   function togglePause() {
     if (state === 'play') { state = 'pause'; $('pPause').hidden = false; }
     else if (state === 'pause') { state = 'play'; $('pPause').hidden = true; }
@@ -260,23 +227,37 @@
   $('startBtn').addEventListener('click', () => { audio(); $('pTitle').hidden = true; newGame(); state = 'play'; });
   $('retryBtn').addEventListener('click', () => { $('pOver').hidden = true; newGame(); state = 'play'; });
 
+  // ---------- balls ----------
+  function addBall(x, y, a) {
+    if (balls.length >= MAXB) return;
+    balls.push({ x, y, vx: Math.cos(a) * SPEED, vy: Math.sin(a) * SPEED, r: 4, last: null });
+  }
+  function fire() {
+    const n = 1 + (ups.multi || 0);
+    for (let i = 0; i < n; i++) addBall(pad.x + (i - (n - 1) / 2) * 10, pad.y - 12, -Math.PI / 2 + (i - (n - 1) / 2) * 0.22 + (Math.random() - 0.5) * 0.5);
+  }
+  function fireLaser() {
+    const iv = effects.laser ? 0.1 : Math.max(0.12, 0.6 / (ups.laser || 1));
+    if (t - (pad.lastShot || 0) < iv) return;
+    pad.lastShot = t;
+    lasers.push({ x: pad.x - pad.w / 2 + 6, y: pad.y - 4 }, { x: pad.x + pad.w / 2 - 6, y: pad.y - 4 });
+  }
+
   // ---------- items ----------
   const ITEMS = [
-    { k: 'multi', label: '×2', col: '#7ef0c9', w: 6 },
+    { k: 'multi', label: '×2', col: '#7ef0c9', w: 5 },
     { k: 'fever', label: 'FEVER', col: '#ffd36e', w: 3 },
     { k: 'laser', label: 'LASER', col: '#ff8fb1', w: 3 },
-    { k: 'fire', label: 'FIRE', col: '#ffb36b', w: 2.5 },
-    { k: 'bomb', label: 'BOMB', col: '#ff6b6b', w: 2 },
-    { k: 'wide', label: 'WIDE', col: '#8fb4ff', w: 3 },
-    { k: 'life', label: '+1', col: '#ffffff', w: 0.5 }
+    { k: 'fire', label: 'FIRE', col: '#ffb36b', w: 3 },
+    { k: 'bomb', label: 'BOMB', col: '#ff6b6b', w: 2.5 },
+    { k: 'wide', label: 'WIDE', col: '#8fb4ff', w: 2 }
   ];
-  function dropItem(x, y, force) {
-    if (!force && Math.random() > 0.15 + 0.06 * (ups.luck || 0)) return;
-    if (items.length > 12) return;
+  function dropItem(x, y) {
+    if (items.length > 10) return;
     const tot = ITEMS.reduce((a, i) => a + i.w, 0);
     let r = Math.random() * tot, it = ITEMS[0];
     for (const i of ITEMS) { r -= i.w; if (r <= 0) { it = i; break; } }
-    items.push({ ...it, x, y, vy: 1.8 });
+    items.push({ ...it, x: Math.max(24, Math.min(LW - 24, x)), y, vy: 2.4 });
   }
   function say(x, y, text, col, size = 16) {
     if (floats.length > 70) floats.shift();
@@ -286,176 +267,175 @@
     tone(880, 0.08, 'triangle', 0.12); tone(1320, 0.12, 'triangle', 0.1);
     say(pad.x, pad.y - 24, it.label, it.col, 18);
     if (it.k === 'multi') {
-      const src = balls.slice();
-      for (const b of src) {
-        if (balls.length >= MAXB) break;
-        const s = Math.hypot(b.vx, b.vy) || baseSpeed(), a = (b.stuck ? -Math.PI / 2 : Math.atan2(b.vy, b.vx)) + (Math.random() < 0.5 ? -0.4 : 0.4);
-        balls.push({ x: b.x, y: b.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, r: b.r, stuck: false, trail: [] });
-      }
-      say(LW / 2, LH - 120, `${balls.length} BALLS`, '#7ef0c9', 20);
-    } else if (it.k === 'wide') { effects.wide = 14; pad.tw = padBase() + 44; }
+      for (const b of balls.slice()) addBall(b.x, b.y, Math.atan2(b.vy, b.vx) + (Math.random() < 0.5 ? -0.5 : 0.5));
+      say(LW / 2, LH - 130, `${balls.length} BALLS`, '#7ef0c9', 20);
+    } else if (it.k === 'wide') { effects.wide = 14; pad.tw = padBase() + 50; }
     else if (it.k === 'laser') effects.laser = 8;
-    else if (it.k === 'fire') effects.fire = 8;
+    else if (it.k === 'fire') effects.fire = 7;
     else if (it.k === 'fever') { effects.fever = 8; flashT = 0.1; }
     else if (it.k === 'bomb') {
       shake = 0.4; flashT = 0.2; buzz(40); tone(70, 0.4, 'sawtooth', 0.16, 0.4);
-      bricks.forEach((o, i) => { if (o.hp !== Infinity) queue.push({ br: o, amt: atk() * 8 * (effects.fever ? 5 : 1), at: t + 0.05 + i * 0.004, col: '#ff6b6b' }); });
-    } else if (it.k === 'life') { lives++; }
+      const amt = atk() * 10 * (effects.fever ? 5 : 1);
+      rows.forEach((row, ri) => row.cells.forEach((br, c) => { if (br) queue.push({ row, c, br, amt, at: t + 0.03 + (rows.length - ri) * 0.012, col: '#ff6b6b' }); }));
+    }
   }
 
   // ---------- bricks ----------
-  function hitBrick(br, d) {
-    if (br.hp === Infinity) { br.hit = 0.12; tone(220, 0.04, 'square', 0.04); return false; }
+  const cellX = c => BX0 + c * CW;
+  function hitBrick(row, c, d) {
+    const br = row.cells[c];
     const dealt = Math.min(br.hp, d.v);
-    br.hp -= d.v; br.hit = 0.12;
-    combo++; comboT = 1.6;
-    const mult = comboMult();
-    score += dealt * mult;
+    br.hp -= d.v; br.hitT = t + 0.07;
+    score += dealt;
     if (d.v > maxHit) maxHit = d.v;
-    const cx = br.x + br.w / 2, cy = br.y + br.h / 2;
-    if (d.crit) say(cx + (Math.random() - 0.5) * 14, cy - 6, fmt(d.v) + '!', '#ffd36e', 15);
-    else if (floats.length < 45) say(cx + (Math.random() - 0.5) * 14, cy - 4, fmt(d.v), d.col || '#f3f1ff', 11);
-    if (combo % 25 === 0) say(LW / 2, LH - 150, `COMBO ${combo}  ×${mult}`, '#ffd36e', 18);
-    if (br.hp <= 0) {
-      score += br.max * mult;
-      burst(cx, cy, COLORS[br.kind][0], parts.length > 300 ? 4 : 12);
-      tone(note(Math.min(Math.floor(combo / 3), 14)), 0.1, 'triangle', 0.1);
-      dropItem(cx, br.y, br.kind === '?');
-      bricks.splice(bricks.indexOf(br), 1);
-      if (br.kind === 'X') explode(br);
-      else if (ups.blast) splash(cx, cy, 1, atk() * ups.blast * (effects.fever ? 5 : 1), '#ffb36b');
-      return true;
-    }
-    tone(note(Math.min(Math.floor(combo / 3), 14)) / 2, 0.05, 'triangle', 0.06);
-    return false;
+    const cx = cellX(c) + BW / 2, cy = topY + rows.indexOf(row) * RH + BH / 2;
+    if (d.crit) say(cx, cy - 6, fmt(d.v) + '!', '#ffd36e', 14);
+    else if (floats.length < 36 && Math.random() < 0.5) say(cx, cy - 4, fmt(d.v), d.col || '#f3f1ff', 10);
+    if (br.hp > 0) return false;
+    row.cells[c] = null; row.n--; broken++;
+    xp += TIER[br.kind];
+    if (parts.length < 260) burst(cx, cy, COLORS[br.kind], 4);
+    tone(note(broken % 15), 0.07, 'triangle', 0.07);
+    if (br.kind === 'P') { for (let i = 0; i < 3; i++) addBall(cx, cy, Math.random() * Math.PI * 2); say(cx, cy, '+3', '#ffffff', 14); }
+    else if (br.kind === 'X') explode(row, c, cx, cy);
+    else if (br.kind === '?' || Math.random() < 0.012 + 0.008 * (ups.luck || 0)) dropItem(cx, cy);
+    if (ups.blast && br.kind !== 'X') splash(row, c, 1, atk() * 0.6 * ups.blast * (effects.fever ? 5 : 1), '#ffb36b');
+    return true;
   }
-  function splash(cx, cy, rad, amt, col) {
-    for (const o of bricks) {
-      if (o.hp === Infinity) continue;
-      if (Math.abs(o.x + o.w / 2 - cx) <= (BW + GAP) * rad + 1 && Math.abs(o.y + o.h / 2 - cy) <= (BH + GAP) * rad + 1) queue.push({ br: o, amt, at: t + 0.06, col });
+  function splash(row, c, rad, amt, col) {
+    const ri = rows.indexOf(row);
+    for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) {
+      const r2 = rows[ri + dr], br = r2 && r2.cells[c + dc];
+      if (br) queue.push({ row: r2, c: c + dc, br, amt, at: t + 0.05, col });
     }
   }
-  function explode(br) {
-    shake = Math.max(shake, 0.25); buzz(25);
-    tone(90, 0.3, 'sawtooth', 0.14, 0.4);
-    flashT = 0.12;
-    const cx = br.x + br.w / 2, cy = br.y + br.h / 2;
-    burst(cx, cy, '#ffb36b', 30, 5);
-    splash(cx, cy, 2, atk() * (10 + 5 * (ups.blast || 0)) * (effects.fever ? 5 : 1), '#ffb36b');
+  function explode(row, c, cx, cy) {
+    shake = Math.max(shake, 0.18); buzz(15);
+    tone(90, 0.25, 'sawtooth', 0.12, 0.4);
+    flashT = Math.max(flashT, 0.06);
+    burst(cx, cy, '#ffb36b', 16, 5);
+    splash(row, c, 2, atk() * (8 + 4 * (ups.blast || 0)) * (effects.fever ? 5 : 1), '#ffb36b');
   }
   function burst(x, y, col, n, sp = 3) {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, v = Math.random() * sp + 0.5;
-      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1, life: 0.5 + Math.random() * 0.4, col, s: 2 + Math.random() * 3 });
+      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1, life: 0.35 + Math.random() * 0.3, col, s: 2 + Math.random() * 2.5 });
+    }
+  }
+  function collide(b, fire) {
+    const r0 = Math.floor((b.y - b.r - topY) / RH), r1 = Math.floor((b.y + b.r - topY) / RH);
+    const c0 = Math.floor((b.x - b.r - BX0) / CW), c1 = Math.floor((b.x + b.r - BX0) / CW);
+    for (let ri = r0; ri <= r1; ri++) {
+      const row = rows[ri];
+      if (!row || !row.n) continue;
+      for (let c = c0; c <= c1; c++) {
+        const br = row.cells[c];
+        if (!br) continue;
+        const bx = cellX(c), by = topY + ri * RH;
+        const nx = Math.max(bx, Math.min(b.x, bx + BW)), ny = Math.max(by, Math.min(b.y, by + BH));
+        const dx = b.x - nx, dy = b.y - ny;
+        if (dx * dx + dy * dy > b.r * b.r) continue;
+        if (fire) {
+          if (b.last === br) continue; // one hit per pass
+          b.last = br; hitBrick(row, c, rollDmg(3)); return;
+        }
+        hitBrick(row, c, rollDmg());
+        const ox = Math.min(b.x + b.r - bx, bx + BW - (b.x - b.r));
+        const oy = Math.min(b.y + b.r - by, by + BH - (b.y - b.r));
+        if (ox < oy) { b.vx = b.x < bx + BW / 2 ? -Math.abs(b.vx) : Math.abs(b.vx); b.x += b.vx > 0 ? ox : -ox; }
+        else { b.vy = b.y < by + BH / 2 ? -Math.abs(b.vy) : Math.abs(b.vy); b.y += b.vy > 0 ? oy : -oy; }
+        return;
+      }
     }
   }
 
   // ---------- update ----------
   function update(dt) {
-    t += dt;
+    t += dt; time += dt;
     for (const k of Object.keys(effects)) { effects[k] -= dt; if (effects[k] <= 0) { delete effects[k]; if (k === 'wide') pad.tw = padBase(); } }
-    if (comboT > 0) { comboT -= dt; if (comboT <= 0) combo = 0; }
     // paddle
-    if (keys.ArrowLeft) pointerX = (pointerX ?? pad.x) - 8;
-    if (keys.ArrowRight) pointerX = (pointerX ?? pad.x) + 8;
+    if (keys.ArrowLeft) pointerX = (pointerX ?? pad.x) - 9;
+    if (keys.ArrowRight) pointerX = (pointerX ?? pad.x) + 9;
     pad.w += (pad.tw - pad.w) * Math.min(1, dt * 10);
-    if (pointerX != null) pad.x += (pointerX - pad.x) * Math.min(1, dt * 22);
+    if (pointerX != null) pad.x += (pointerX - pad.x) * Math.min(1, dt * 24);
     pad.x = Math.max(pad.w / 2 + 4, Math.min(LW - pad.w / 2 - 4, pad.x));
-    if ((effects.laser || ups.laser) && balls.some(b => !b.stuck)) fireLaser();
+
+    // the wall keeps coming; it rushes in whenever the field is thin
+    while (rows.length && !rows[rows.length - 1].n) rows.pop();
+    const sp = bottom() < FILL ? 95 : RH * (0.2 + time / 300 + (time / 260) ** 2) * Math.pow(0.88, ups.anchor || 0);
+    topY += sp * dt;
+    while (topY >= TOP) { rows.unshift(genRow()); topY -= RH; }
+    if (bottom() >= DANGER) return gameOver();
+
+    // auto fire
+    fireT -= dt;
+    if (fireT <= 0) { fire(); fireT += fireIv(); if (fireT < 0) fireT = 0; }
+    if (effects.laser || ups.laser) fireLaser();
 
     // balls with substeps
-    const f = dt * 60, fire = !!effects.fire;
+    const f = dt * 60, fireOn = !!effects.fire;
     for (let i = balls.length - 1; i >= 0; i--) {
       const b = balls[i];
-      if (b.stuck) { b.x = pad.x; b.y = pad.y - pad.h / 2 - b.r - 1; continue; }
-      const steps = Math.ceil(Math.hypot(b.vx, b.vy) * f / 3);
+      const steps = Math.ceil(SPEED * f / 3);
       for (let s = 0; s < steps; s++) {
         b.x += b.vx * f / steps; b.y += b.vy * f / steps;
         if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
         if (b.x > LW - b.r) { b.x = LW - b.r; b.vx = -Math.abs(b.vx); }
-        if (b.y < 64 + b.r) { b.y = 64 + b.r; b.vy = Math.abs(b.vy); b.last = null; }
-        // paddle
+        if (b.y < TOP + b.r) { b.y = TOP + b.r; b.vy = Math.abs(b.vy); b.last = null; }
         if (b.vy > 0 && b.y + b.r >= pad.y - pad.h / 2 && b.y - b.r <= pad.y + pad.h / 2 && Math.abs(b.x - pad.x) <= pad.w / 2 + b.r) {
           const off = Math.max(-1, Math.min(1, (b.x - pad.x) / (pad.w / 2)));
           const a = -Math.PI / 2 + off * 1.05;
-          const sp = Math.min(baseSpeed() * 1.35, Math.hypot(b.vx, b.vy) * 1.004 + 0.01);
-          b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp;
+          b.vx = Math.cos(a) * SPEED; b.vy = Math.sin(a) * SPEED;
           b.y = pad.y - pad.h / 2 - b.r;
-          pad.bounce = 0.12; b.last = null;
-          tone(440, 0.05, 'triangle', 0.08);
+          pad.bounce = 0.1; b.last = null;
         }
-        // bricks
-        for (const br of bricks) {
-          const nx = Math.max(br.x, Math.min(b.x, br.x + br.w)), ny = Math.max(br.y, Math.min(b.y, br.y + br.h));
-          const dx = b.x - nx, dy = b.y - ny;
-          if (dx * dx + dy * dy > b.r * b.r) continue;
-          if (fire && br.hp !== Infinity) {
-            if (b.last === br) continue; // one hit per pass
-            b.last = br; hitBrick(br, rollDmg(3)); break;
-          }
-          hitBrick(br, rollDmg());
-          const ox = Math.min(b.x + b.r - br.x, br.x + br.w - (b.x - b.r));
-          const oy = Math.min(b.y + b.r - br.y, br.y + br.h - (b.y - b.r));
-          if (ox < oy) { b.vx = b.x < br.x + br.w / 2 ? -Math.abs(b.vx) : Math.abs(b.vx); b.x += b.vx > 0 ? ox : -ox; }
-          else { b.vy = b.y < br.y + br.h / 2 ? -Math.abs(b.vy) : Math.abs(b.vy); b.y += b.vy > 0 ? oy : -oy; }
-          break;
-        }
-        // avoid flat horizontal loops
-        if (Math.abs(b.vy) < 0.9) b.vy = b.vy < 0 ? -0.9 : 0.9;
+        collide(b, fireOn);
+        if (Math.abs(b.vy) < 1.2) b.vy = b.vy < 0 ? -1.2 : 1.2; // avoid flat horizontal loops
       }
-      b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > (balls.length > 20 ? 4 : 10)) b.trail.shift();
-      if (b.y > LH + 20) balls.splice(i, 1);
+      if (b.y > LH + 10) balls.splice(i, 1);
     }
-    if (!balls.length) loseLife();
 
     // lasers
     for (let i = lasers.length - 1; i >= 0; i--) {
-      const l = lasers[i]; l.y -= 12 * f;
-      const br = bricks.find(o => l.x >= o.x && l.x <= o.x + o.w && l.y >= o.y && l.y <= o.y + o.h);
-      if (br) { const d = rollDmg(0.4 + 0.3 * (ups.laser || 0)); d.col = '#ff8fb1'; hitBrick(br, d); lasers.splice(i, 1); continue; }
-      if (l.y < 60) lasers.splice(i, 1);
+      const l = lasers[i]; l.y -= 14 * f;
+      const ri = Math.floor((l.y - topY) / RH), c = Math.floor((l.x - BX0) / CW), row = rows[ri];
+      if (row && row.cells[c]) { const d = rollDmg(0.5 + 0.3 * (ups.laser || 0)); d.col = '#ff8fb1'; hitBrick(row, c, d); lasers.splice(i, 1); continue; }
+      if (l.y < TOP) lasers.splice(i, 1);
     }
     // delayed splash / bomb damage
     for (let i = queue.length - 1; i >= 0; i--) {
       const q = queue[i];
       if (q.at > t) continue;
       queue.splice(i, 1);
-      if (bricks.includes(q.br)) hitBrick(q.br, { v: q.amt, crit: false, col: q.col });
+      if (q.row.cells[q.c] === q.br && rows.includes(q.row)) hitBrick(q.row, q.c, { v: q.amt, crit: false, col: q.col });
     }
     // items
     for (let i = items.length - 1; i >= 0; i--) {
       const it = items[i]; it.y += it.vy * f;
-      if (it.y > pad.y - 12 && it.y < pad.y + 12 && Math.abs(it.x - pad.x) < pad.w / 2 + 16) { applyItem(it); items.splice(i, 1); continue; }
+      if (it.y > pad.y - 12 && it.y < pad.y + 12 && Math.abs(it.x - pad.x) < pad.w / 2 + 18) { applyItem(it); items.splice(i, 1); continue; }
       if (it.y > LH + 20) items.splice(i, 1);
     }
     for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= dt; p.x += p.vx * f; p.y += p.vy * f; p.vy += 0.12 * f; if (p.life <= 0) parts.splice(i, 1); }
-    for (let i = floats.length - 1; i >= 0; i--) { floats[i].t += dt * (floats[i].size > 12 ? 1 : 1.6); if (floats[i].t > 1) floats.splice(i, 1); }
-    for (const br of bricks) { if (br.hit > 0) br.hit -= dt; if (br.born > 0) br.born -= dt; }
+    for (let i = floats.length - 1; i >= 0; i--) { floats[i].t += dt * (floats[i].size > 12 ? 1 : 1.8); if (floats[i].t > 1) floats.splice(i, 1); }
     if (shake > 0) shake -= dt; if (flashT > 0) flashT -= dt; if (pad.bounce > 0) pad.bounce -= dt;
 
-    if (state === 'play' && !bricks.some(b => b.hp !== Infinity)) stageClear();
+    lvCd -= dt; xp = Math.min(xp + need * dt / 12, need * 3);
+    if (xp >= need && lvCd <= 0) { xp -= need; need += 8; level++; pending++; lvCd = LVCD; }
+    if (pending) openPick();
     hud();
-  }
-
-  function loseLife() {
-    lives--; hud(); buzz([30, 50, 30]);
-    tone(300, 0.35, 'sawtooth', 0.1, 0.4);
-    shake = 0.3;
-    if (lives <= 0) return gameOver();
-    resetBall();
   }
 
   // ---------- upgrades ----------
   const UPS = [
-    { k: 'pow', ic: 'ATK', col: '#ff8fb1', name: 'パワーコア', d: '攻撃力 ×2', w: 5 },
-    { k: 'ball', ic: '+2', col: '#7ef0c9', name: 'マルチショット', d: '開始時のボール +2', w: 4, max: 6 },
+    { k: 'pow', ic: 'ATK', col: '#ff8fb1', name: 'パワーコア', d: '攻撃力 ×2', w: 3 },
+    { k: 'rate', ic: '≫', col: '#7ef0c9', name: 'ラピッドファイア', d: 'ボールの発射速度 +40%', w: 4, max: 6 },
+    { k: 'multi', ic: '+1', col: '#7ef0c9', name: 'マルチショット', d: '同時に撃つボール +1', w: 4, max: 4 },
     { k: 'crit', ic: 'CRT', col: '#ffd36e', name: 'クリティカル', d: '会心率 +15%・会心倍率 +2', w: 4, max: 6 },
-    { k: 'blast', ic: '✹', col: '#ffb36b', name: '連鎖爆破', d: '破壊時、周囲に攻撃力ぶんの爆風（重ねて強化）', w: 4 },
-    { k: 'laser', ic: 'LSR', col: '#ff8fb1', name: 'オートレーザー', d: 'レーザーを常時自動発射（重ねて強化）', w: 3 },
-    { k: 'combo', ic: '×', col: '#ffd36e', name: 'コンボブースト', d: 'コンボのスコア倍率 ×2', w: 3 },
+    { k: 'blast', ic: '✹', col: '#ffb36b', name: '連鎖爆破', d: '壊したブロックの周囲に爆風（重ねて強化）', w: 4 },
+    { k: 'laser', ic: 'LSR', col: '#ff8fb1', name: 'オートレーザー', d: 'レーザーを常時連射（重ねて強化）', w: 3 },
     { k: 'wide', ic: '⟷', col: '#8fb4ff', name: 'ロングパドル', d: 'パドル幅 +18', w: 3, max: 4 },
-    { k: 'luck', ic: '?', col: '#c9b6ff', name: 'ラッキードロップ', d: 'アイテム出現率 +6%', w: 3, max: 5 },
-    { k: 'life', ic: '+1', col: '#ff6b6b', name: 'エクストラライフ', d: 'ライフ +1', w: 1.5, rare: true },
+    { k: 'luck', ic: '?', col: '#c9b6ff', name: 'ラッキードロップ', d: 'アイテムが出やすくなる', w: 3, max: 5 },
+    { k: 'anchor', ic: '▼', col: '#8fb4ff', name: 'アンカー', d: '壁が迫る速度 −12%', w: 2.5, max: 4 },
     { k: 'mega', ic: '×5', col: '#ffd36e', name: 'オーバードライブ', d: '攻撃力 ×5', w: 1, rare: true }
   ];
   function rollCards() {
@@ -467,13 +447,11 @@
     }
     return out;
   }
-  function stageClear() {
-    state = 'pick';
-    const bonus = hpScale() * 50 * comboMult();
-    score += bonus; hud();
-    [523, 659, 784, 1047].forEach((fq, i) => setTimeout(() => { tones = 0; tone(fq, 0.18, 'triangle', 0.12); }, i * 90));
-    $('pickTitle').textContent = `STAGE ${stage + 1} CLEAR`;
-    $('pickSub').textContent = `ボーナス +${fmt(bonus)}　強化を1つ選ぶ`;
+  function openPick() {
+    state = 'pick'; pickAt = performance.now();
+    tones = 0; tone(784, 0.12, 'triangle', 0.12); tone(1047, 0.2, 'triangle', 0.1);
+    $('pickTitle').textContent = 'LEVEL UP';
+    $('pickSub').textContent = `LV ${level + 1 - pending + 1}　強化を1つ選ぶ`;
     const box = $('cards'); box.textContent = '';
     for (const u of rollCards()) {
       const b = document.createElement('button');
@@ -483,27 +461,28 @@
       if (ups[u.k]) { const lv = document.createElement('span'); lv.className = 'lv'; lv.textContent = `Lv${ups[u.k]}→${ups[u.k] + 1}`; tx.append(lv); }
       const d = document.createElement('span'); d.className = 'd'; d.textContent = u.d; tx.append(d);
       b.append(ic, tx);
-      b.addEventListener('click', () => pick(u.k));
+      b.addEventListener('click', e => pick(u.k, e));
       box.append(b);
     }
-    setTimeout(() => { if (state === 'pick') $('pPick').hidden = false; }, 450);
+    $('pPick').hidden = false;
   }
-  function pick(k) {
-    if (state !== 'pick') return;
-    if (k === 'life') lives++; else ups[k] = (ups[k] || 0) + 1;
+  function pick(k, e) {
+    if (state !== 'pick' || (e && e.isTrusted && performance.now() - pickAt < 280)) return; // ignore a tap that was meant for the paddle
+    ups[k] = (ups[k] || 0) + 1; pending--;
+    if (k === 'wide') pad.tw = padBase() + (effects.wide ? 50 : 0);
+    if (pending > 0) return openPick();
     $('pPick').hidden = true;
-    stage++;
-    buildStage(); floats = [];
-    say(LW / 2, LH / 2, `ATK ${fmt(atk())}`, '#ffd36e', 22);
     pointerX = null; state = 'play'; hud();
   }
   function gameOver() {
-    state = 'over';
+    state = 'over'; shake = 0.4; buzz([30, 50, 30]);
+    tones = 0; tone(300, 0.4, 'sawtooth', 0.1, 0.4);
     const nb = score > best;
-    if (nb) { best = score; store.set('pb2.best', best); }
+    if (nb) { best = score; store.set('pb3.best', best); }
     $('overScore').textContent = fmt(score);
     $('overNew').hidden = !nb;
-    $('overSub').textContent = `STAGE ${stage + 1} まで到達　最大ヒット ${fmt(maxHit)}　BEST ${fmt(best)}`;
+    const m = Math.floor(time / 60), s = Math.floor(time % 60);
+    $('overSub').textContent = `${m}:${String(s).padStart(2, '0')} 生存　LV ${level + 1}　${broken.toLocaleString()}個破壊　BEST ${fmt(best)}`;
     setTimeout(() => { $('pOver').hidden = false; }, 500);
   }
 
@@ -514,52 +493,53 @@
     g.setTransform(S, 0, 0, S, 0, 0);
     g.clearRect(0, 0, LW, LH);
     if (shake > 0) g.translate((Math.random() - 0.5) * shake * 16, (Math.random() - 0.5) * shake * 16);
-    const lite = balls.length > 20;
 
     // backdrop
     const bg = g.createLinearGradient(0, 0, 0, LH);
     bg.addColorStop(0, effects.fever ? '#4a2a4e' : '#221b52'); bg.addColorStop(1, '#0d1b36');
     g.fillStyle = bg; g.fillRect(0, 0, LW, LH);
-    // soft glows
     for (const [x, y, r, c] of [[60, 180, 220, 'rgba(255,143,177,0.10)'], [340, 420, 260, 'rgba(126,240,201,0.08)'], [200, 700, 240, 'rgba(143,180,255,0.10)']]) {
       const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c); gr.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = gr; g.fillRect(0, 0, LW, LH);
     }
-    // dot grid
-    g.fillStyle = 'rgba(255,255,255,0.05)';
-    for (let y = 72; y < LH; y += 24) for (let x = 12; x < LW; x += 24) g.fillRect(x, y, 1.5, 1.5);
-    // top rail
-    g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(0, 62, LW, 2);
+    // danger line
+    const near = Math.max(0, 1 - (DANGER - bottom()) / 110);
+    g.fillStyle = `rgba(255,107,107,${0.18 + near * (0.4 + 0.3 * Math.sin(t * 12))})`;
+    for (let x = 0; x < LW; x += 14) g.fillRect(x, DANGER, 8, 2);
+    if (near > 0) { const dg = g.createLinearGradient(0, DANGER - 120, 0, DANGER); dg.addColorStop(0, 'rgba(255,80,80,0)'); dg.addColorStop(1, `rgba(255,80,80,${near * 0.22})`); g.fillStyle = dg; g.fillRect(0, DANGER - 120, LW, 120); }
 
     // bricks
-    for (const br of bricks) {
-      const [c1, c2] = COLORS[br.kind];
-      const k = br.born > 0 ? Math.max(0, 1 - br.born * 8) : 1;
-      g.save();
-      g.globalAlpha = k;
-      const y = br.y - (1 - k) * 20;
-      const grd = g.createLinearGradient(0, y, 0, y + br.h);
-      grd.addColorStop(0, br.hit > 0 ? '#ffffff' : c1); grd.addColorStop(1, br.hit > 0 ? '#ffffff' : c2);
-      g.shadowColor = c1; g.shadowBlur = br.kind === 'S' || lite ? 0 : 10;
-      rr(br.x, y, br.w, br.h, 5); g.fillStyle = grd; g.fill();
-      g.shadowBlur = 0;
-      if (br.hp !== Infinity && br.hp < br.max) { // damage taken darkens from the right
-        const lost = 1 - br.hp / br.max;
-        g.save(); rr(br.x, y, br.w, br.h, 5); g.clip();
-        g.fillStyle = 'rgba(15,12,40,0.45)'; g.fillRect(br.x + br.w * (1 - lost), y, br.w * lost, br.h); g.restore();
+    g.save();
+    g.beginPath(); g.rect(0, 64, LW, LH); g.clip();
+    g.font = '800 9px Sora, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let ri = 0; ri < rows.length; ri++) {
+      const row = rows[ri];
+      if (!row.n) continue;
+      const y = topY + ri * RH;
+      for (let c = 0; c < COLS; c++) {
+        const br = row.cells[c];
+        if (!br) continue;
+        const x = cellX(c);
+        g.globalAlpha = br.hitT > t ? 1 : 0.5 + 0.5 * Math.max(0, br.hp / br.max);
+        g.fillStyle = br.hitT > t ? '#ffffff' : COLORS[br.kind];
+        g.fillRect(x, y, BW, BH);
+        g.globalAlpha = 1;
+        if (br.kind === 'P') { g.fillStyle = '#3a2f7a'; g.fillRect(x + BW / 2 - 4, y + BH / 2 - 1, 8, 2); g.fillRect(x + BW / 2 - 1, y + BH / 2 - 4, 2, 8); }
+        else if (br.kind === 'X') { g.fillStyle = '#5a2600'; g.fillText('✹', x + BW / 2, y + BH / 2 + 1); }
+        else if (br.kind === '?') { g.fillStyle = '#5a4300'; g.fillText('?', x + BW / 2, y + BH / 2 + 1); }
+        else { g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(x, y, BW, 2); }
       }
-      g.fillStyle = 'rgba(255,255,255,0.35)'; rr(br.x + 3, y + 2, br.w - 6, 3, 2); g.fill();
-      g.fillStyle = 'rgba(20,16,50,0.85)'; g.font = '800 9px Sora, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      if (br.kind === 'S') { g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1; rr(br.x + 0.5, y + 0.5, br.w - 1, br.h - 1, 5); g.stroke(); }
-      else g.fillText((br.kind === 'X' ? '✹' : br.kind === '?' ? '?' : '') + fmt(Math.max(1, br.hp)), br.x + br.w / 2, y + br.h / 2 + 1);
-      g.restore();
     }
+    g.restore();
+    // top rail + xp bar
+    g.fillStyle = 'rgba(255,255,255,0.10)'; g.fillRect(0, 62, LW, 3);
+    g.fillStyle = '#ffd36e'; g.fillRect(0, 62, LW * Math.min(1, xp / need), 3);
 
     // items
     for (const it of items) {
       g.save(); g.shadowColor = it.col; g.shadowBlur = 12;
-      rr(it.x - 20, it.y - 8, 40, 16, 8); g.fillStyle = it.col; g.fill(); g.restore();
-      g.fillStyle = '#1b1640'; g.font = '800 9px Sora, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      rr(it.x - 22, it.y - 9, 44, 18, 9); g.fillStyle = it.col; g.fill(); g.restore();
+      g.fillStyle = '#1b1640'; g.font = '800 10px Sora, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText(it.label, it.x, it.y + 0.5);
     }
     // lasers
@@ -568,7 +548,6 @@
 
     // paddle
     const py = pad.y + (pad.bounce > 0 ? pad.bounce * 14 : 0);
-    const hasLaser = effects.laser || ups.laser;
     g.save();
     const pc = effects.fever ? '#ffd36e' : effects.laser ? '#ff8fb1' : effects.wide ? '#8fb4ff' : '#f3f1ff';
     g.shadowColor = pc; g.shadowBlur = 18;
@@ -576,24 +555,20 @@
     pg.addColorStop(0, '#ff8fb1'); pg.addColorStop(0.5, pc); pg.addColorStop(1, '#7ef0c9');
     rr(pad.x - pad.w / 2, py - pad.h / 2, pad.w, pad.h, pad.h / 2); g.fillStyle = pg; g.fill();
     g.restore();
-    if (hasLaser) { g.fillStyle = '#ff8fb1'; g.fillRect(pad.x - pad.w / 2 + 4, py - pad.h / 2 - 5, 4, 5); g.fillRect(pad.x + pad.w / 2 - 8, py - pad.h / 2 - 5, 4, 5); }
+    g.fillStyle = '#f3f1ff'; rr(pad.x - 4, py - pad.h / 2 - 6, 8, 8, 3); g.fill();
+    if (effects.laser || ups.laser) { g.fillStyle = '#ff8fb1'; g.fillRect(pad.x - pad.w / 2 + 4, py - pad.h / 2 - 5, 4, 5); g.fillRect(pad.x + pad.w / 2 - 8, py - pad.h / 2 - 5, 4, 5); }
 
     // balls
     const col = effects.fire ? '#ffb36b' : effects.fever ? '#ffe9a8' : '#ffffff';
-    const tcol = effects.fire ? '#ff8a3d' : effects.fever ? '#ffd36e' : '#b9c7ff';
-    for (const b of balls) {
-      g.fillStyle = tcol;
-      b.trail.forEach((p, i) => {
-        g.globalAlpha = (i / b.trail.length) * 0.35;
-        g.beginPath(); g.arc(p.x, p.y, b.r * (0.4 + 0.6 * i / b.trail.length), 0, Math.PI * 2); g.fill();
-      });
-      g.globalAlpha = 1;
-      if (!lite) { g.shadowColor = col; g.shadowBlur = 16; }
-      g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fillStyle = col; g.fill();
-      g.shadowBlur = 0;
-    }
+    const glow = effects.fire ? 'rgba(255,138,61,0.3)' : effects.fever ? 'rgba(255,211,110,0.3)' : 'rgba(185,199,255,0.28)';
+    g.fillStyle = glow; g.beginPath();
+    for (const b of balls) { g.moveTo(b.x - b.vx * 1.4 + b.r, b.y - b.vy * 1.4); g.arc(b.x - b.vx * 1.4, b.y - b.vy * 1.4, b.r * 0.9, 0, Math.PI * 2); }
+    g.fill();
+    g.fillStyle = col; g.beginPath();
+    for (const b of balls) { g.moveTo(b.x + b.r, b.y); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); }
+    g.fill();
     // particles
-    for (const p of parts) { g.globalAlpha = Math.max(0, p.life * 1.6); g.fillStyle = p.col; g.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s); }
+    for (const p of parts) { g.globalAlpha = Math.max(0, Math.min(1, p.life * 2.4)); g.fillStyle = p.col; g.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s); }
     g.globalAlpha = 1;
     // floats (damage numbers etc.)
     g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -601,29 +576,14 @@
       g.globalAlpha = Math.max(0, Math.min(1, 1.6 - fl.t * 1.6)); g.fillStyle = fl.col;
       const pop = fl.size > 12 ? 1 + Math.max(0, 0.15 - fl.t) * 3 : 1;
       g.font = `800 ${Math.round(fl.size * pop)}px Sora, sans-serif`;
-      g.fillText(fl.text, fl.x, fl.y - fl.t * 30);
+      g.fillText(fl.text, fl.x, fl.y - fl.t * 26);
     }
     g.globalAlpha = 1;
-    // combo meter
-    if (combo >= 5 && state === 'play') {
-      g.fillStyle = 'rgba(255,211,110,0.9)'; g.font = '800 13px Sora, sans-serif'; g.textAlign = 'center';
-      g.fillText(`COMBO ${combo}  ×${comboMult()}`, LW / 2, LH - 26);
-      g.fillStyle = 'rgba(255,211,110,0.5)'; rr(LW / 2 - 40, LH - 16, 80 * Math.max(0, comboT / 1.6), 3, 1.5); g.fill();
-    }
-    // ball count
-    if (balls.length > 1) {
-      g.fillStyle = 'rgba(243,241,255,0.75)'; g.font = '800 11px Sora, sans-serif'; g.textAlign = 'right';
-      g.fillText(`● ×${balls.length}`, LW - 12, LH - 24);
-    }
     // effect timers
     let ex = 12;
     for (const it of ITEMS) if (effects[it.k] > 0) {
       g.fillStyle = it.col; rr(ex, LH - 18, 44 * Math.min(1, effects[it.k] / 8), 4, 2); g.fill();
       g.font = '600 9px Sora, sans-serif'; g.textAlign = 'left'; g.fillText(it.label, ex, LH - 26); ex += 52;
-    }
-    if (balls.some(b => b.stuck) && state === 'play') {
-      g.fillStyle = 'rgba(243,241,255,0.7)'; g.font = '600 13px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center';
-      g.fillText('タップで発射', LW / 2, pad.y + 40);
     }
     if (flashT > 0) { g.fillStyle = `rgba(255,220,180,${flashT * 1.5})`; g.fillRect(0, 0, LW, LH); }
   }
@@ -633,16 +593,19 @@
   function frame(now) {
     const dt = Math.min((now - last) / 1000, 1 / 30); last = now;
     tones = 0;
-    if (state === 'play') update(dt);
-    else { t += dt; for (const br of bricks) if (br.born > 0) br.born -= dt; }
+    if (state === 'play') update(dt); else t += dt;
     draw();
     requestAnimationFrame(frame);
   }
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') togglePause(); });
-  window.__pb = { info: () => ({ state, score, stage, lives, balls: balls.length, bricks: bricks.length, atk: atk(), ups, combo, floats: floats.length }), update, draw, launch, aim() { const b = balls.filter(o => o.vy > 0 && o.y < pad.y).sort((x, y) => y.y - x.y)[0]; if (b) pointerX = pad.x = b.x + Math.sin(t * 3) * pad.w * 0.4; }, give: k => applyItem(ITEMS.find(i => i.k === k)), fmt };
+  window.__pb = {
+    info: () => ({ state, score, level, time, balls: balls.length, bricks: rows.reduce((a, r) => a + r.n, 0), bottom: bottom(), depth, atk: atk(), hp: rowHp(depth), ups, floats: floats.length, parts: parts.length, broken }),
+    update, draw, fmt, give: k => applyItem(ITEMS.find(i => i.k === k)),
+    aim() { const b = balls.filter(o => o.vy > 0 && o.y < pad.y && o.y > 400).sort((x, y) => y.y - x.y)[0], it = items.sort((x, y) => y.y - x.y)[0]; const tx = it && it.y > 350 ? it.x : b ? b.x + Math.sin(t * 3) * pad.w * 0.35 : LW / 2 + Math.sin(t * 0.9) * 150; pointerX = tx; }
+  };
 
   resize();
-  buildStage();
+  newGame();
   requestAnimationFrame(tt => { last = tt; frame(tt); });
 })();
 </script>
