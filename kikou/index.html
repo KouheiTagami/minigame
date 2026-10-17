@@ -1,0 +1,1004 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>機甲戦線</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Oxanium:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+  /* layout: full-bleed hex war map, command strip pinned top, orders + intel card pinned bottom */
+  :root {
+    color-scheme: dark;
+    --bg: #0d1411; --panel: #151f1a; --panel2: #1e2b24; --line: #2e3f35; --ink: #e9efe6; --dim: #94a497;
+    --blue: #4f8cff; --red: #ff5b4f; --gold: #f2c14e; --ok: #7fd67a;
+    --display: "Dela Gothic One", "Hiragino Sans", "Yu Gothic", sans-serif;
+    --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+    --num: "Oxanium", "Zen Kaku Gothic New", system-ui, sans-serif;
+  }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); overflow: hidden; overscroll-behavior: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  button:disabled { cursor: default; }
+  #top { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; gap: 6px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) 12px max(10px, env(safe-area-inset-left, 0px)); background: linear-gradient(rgba(13, 20, 17, 0.94) 55%, rgba(13, 20, 17, 0)); pointer-events: none; }
+  #top > * { pointer-events: auto; }
+  .chip { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; background: rgba(21, 31, 26, 0.9); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; }
+  .chip b { font-family: var(--num); font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .chip .inc { color: var(--ok); font-family: var(--num); font-weight: 700; font-size: 12px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .sp { flex: 1; }
+  .ibtn { height: 36px; min-width: 38px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(21, 31, 26, 0.9); font-weight: 700; font-size: 13px; }
+  #bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; gap: 8px; padding: 14px max(10px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); background: linear-gradient(rgba(13, 20, 17, 0), rgba(13, 20, 17, 0.94) 40%); pointer-events: none; }
+  #acts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; pointer-events: auto; }
+  .act { padding: 11px 18px; min-width: 76px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); font-weight: 700; font-size: 14.5px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
+  .act.main { background: var(--gold); border-color: var(--gold); color: #1d1606; }
+  .act.warn { background: var(--red); border-color: var(--red); color: #fff; }
+  #bar { display: flex; gap: 8px; align-items: stretch; pointer-events: auto; }
+  #info { flex: 1; min-width: 0; min-height: 70px; padding: 8px 10px; border-radius: 14px; background: rgba(21, 31, 26, 0.94); border: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center; gap: 5px; font-size: 12px; }
+  #endBtn { flex: none; width: 88px; border-radius: 14px; border: 1px solid var(--blue); background: var(--blue); color: #fff; font-family: var(--display); font-size: 14px; line-height: 1.3; letter-spacing: 0.04em; }
+  #endBtn:disabled { opacity: 0.45; }
+  #endBtn.ready { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(79, 140, 255, 0.28); } }
+  .hint { color: var(--dim); line-height: 1.55; }
+  .iu { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  .uic { width: 40px; height: 40px; flex: none; }
+  .ub { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .un { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+  .un b { font-size: 14px; }
+  .sd { font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 6px; }
+  .s0 { background: rgba(79, 140, 255, 0.2); color: #9cc0ff; }
+  .s1 { background: rgba(255, 91, 79, 0.2); color: #ffaaa3; }
+  .n { background: rgba(217, 209, 180, 0.16); color: #d9d1b4; }
+  .rk { color: var(--gold); font-size: 11px; letter-spacing: 0.05em; }
+  .hp { height: 5px; border-radius: 3px; background: #0b100d; overflow: hidden; }
+  .hp i { display: block; height: 100%; background: var(--ok); border-radius: 3px; }
+  .us { color: var(--dim); font-family: var(--num); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .it { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; color: var(--dim); }
+  .it b { color: var(--ink); font-size: 12.5px; }
+  .st { color: var(--gold); letter-spacing: 0.04em; }
+  .capt { color: var(--gold); font-weight: 700; }
+  .fc { display: flex; gap: 8px; align-items: center; }
+  .fc .ub { gap: 1px; }
+  .fc .v { font-family: var(--num); font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .fc .v em { font-style: normal; color: var(--red); }
+  .fc .tag { font-size: 11.5px; font-weight: 700; color: var(--gold); }
+  #banner { position: fixed; left: 0; right: 0; top: 36%; z-index: 6; text-align: center; font-family: var(--display); font-size: 34px; letter-spacing: 0.08em; pointer-events: none; opacity: 0; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.75); }
+  #banner.on { animation: ban 1.4s ease forwards; }
+  @keyframes ban { 0% { opacity: 0; transform: translateY(10px); } 15%, 70% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  #toast { position: fixed; left: 50%; top: calc(62px + env(safe-area-inset-top, 0px)); z-index: 6; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); padding: 8px 14px; border-radius: 10px; background: rgba(14, 20, 17, 0.95); border: 1px solid var(--line); font-size: 13px; text-align: center; pointer-events: none; transition: opacity 0.25s; opacity: 0; }
+  #toast.on { opacity: 1; }
+  .panel { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px)); background: rgba(8, 12, 10, 0.8); backdrop-filter: blur(3px); overflow-y: auto; }
+  .box { width: min(100%, 440px); display: flex; flex-direction: column; gap: 14px; padding-block: calc(6px + env(safe-area-inset-top, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .eyebrow { font-family: var(--num); font-size: 11px; font-weight: 800; letter-spacing: 0.24em; color: var(--gold); }
+  h1 { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(40px, 13vw, 58px); line-height: 1.05; letter-spacing: 0.04em; text-wrap: balance; }
+  h1 span { color: var(--blue); }
+  h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 24px; letter-spacing: 0.06em; text-align: center; text-wrap: balance; }
+  .lead { margin: 0; color: var(--dim); font-size: 13.5px; line-height: 1.75; }
+  .dim { margin: 0; color: var(--dim); font-size: 12.5px; line-height: 1.6; text-align: center; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .btn { padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); font-weight: 700; font-size: 15px; }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-family: var(--display); font-weight: 400; letter-spacing: 0.06em; }
+  .scen { display: grid; gap: 8px; }
+  .sc { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); }
+  .sc b { font-family: var(--display); font-weight: 400; font-size: 16px; letter-spacing: 0.03em; }
+  .sc .s { font-size: 12px; color: var(--dim); line-height: 1.5; }
+  .sc .m { font-size: 11px; color: var(--dim); font-family: var(--num); letter-spacing: 0.04em; }
+  .sc .ok { color: var(--ok); font-size: 12px; font-weight: 700; grid-row: 1 / span 3; grid-column: 2; align-self: center; text-align: right; font-family: var(--num); }
+  .build { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bu { display: grid; grid-template-columns: 44px 1fr; grid-template-rows: auto auto; gap: 1px 8px; align-items: center; text-align: left; padding: 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); min-width: 0; }
+  .bu:disabled { opacity: 0.38; }
+  .bu canvas { grid-row: 1 / span 2; width: 44px; height: 44px; }
+  .bu .nm { display: flex; justify-content: space-between; gap: 4px; font-size: 13px; font-weight: 700; }
+  .bu .c { font-family: var(--num); color: var(--gold); font-weight: 800; }
+  .bu .d { font-size: 10.5px; color: var(--dim); line-height: 1.4; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stats div { padding: 10px 12px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+  .stats b { display: block; font-family: var(--num); font-weight: 800; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .stats span { font-size: 11.5px; color: var(--dim); }
+  .help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; line-height: 1.6; color: var(--ink); }
+  .help b { color: var(--gold); }
+  @media (prefers-reduced-motion: reduce) { #endBtn.ready, #banner.on { animation-duration: 0.01s; } }
+</style>
+
+<canvas id="cv"></canvas>
+
+<header id="top">
+  <div class="chip"><span class="dot" id="sideDot"></span><span>ターン</span><b id="turnNo">1</b></div>
+  <div class="chip"><span>資金</span><b id="funds">0</b><span class="inc" id="inc">+0</span></div>
+  <span class="sp"></span>
+  <button type="button" class="ibtn" id="nextBtn" aria-label="次の未行動部隊">次の部隊</button>
+  <button type="button" class="ibtn" id="menuBtn" aria-label="メニュー">≡</button>
+</header>
+
+<div id="bottom">
+  <div id="acts" hidden></div>
+  <div id="bar">
+    <div id="info"></div>
+    <button type="button" id="endBtn">ターン<br>終了</button>
+  </div>
+</div>
+
+<div id="banner"></div>
+<div id="toast"></div>
+
+<section class="panel" id="pTitle">
+  <div class="box">
+    <div class="eyebrow">HEX WARGAME · TURN BASED</div>
+    <h1>機甲<span>戦線</span></h1>
+    <p class="lead">ヘックスマップの現代戦シミュレーション。歩兵で都市を占領して資金を稼ぎ、工場で戦車を、空港で航空機を生産して、敵の司令部を落とせ。</p>
+    <button type="button" class="btn primary" id="resumeBtn" hidden>つづきから</button>
+    <div class="scen" id="scenList"></div>
+    <button type="button" class="btn" id="helpBtn">遊び方</button>
+  </div>
+</section>
+
+<section class="panel" id="pBuild" hidden>
+  <div class="box">
+    <h2 id="buildTitle">生産</h2>
+    <p class="dim" id="buildFunds"></p>
+    <div class="build" id="buildList"></div>
+    <button type="button" class="btn" id="buildClose">閉じる</button>
+  </div>
+</section>
+
+<section class="panel" id="pMenu" hidden>
+  <div class="box">
+    <h2>作戦メニュー</h2>
+    <button type="button" class="btn primary" id="mResume">戦闘に戻る</button>
+    <div class="row">
+      <button type="button" class="btn" id="mSpeed">速度：標準</button>
+      <button type="button" class="btn" id="mSound">効果音：ON</button>
+    </div>
+    <button type="button" class="btn" id="mHelp">遊び方</button>
+    <button type="button" class="btn" id="mTitle">タイトルへ（自動保存）</button>
+  </div>
+</section>
+
+<section class="panel" id="pHelp" hidden>
+  <div class="box">
+    <h2>遊び方</h2>
+    <ul class="help">
+      <li>自軍の部隊をタップすると、<b>青いマス</b>に移動できる。移動先で「攻撃」「占領」「待機」などを選ぶ。</li>
+      <li><b>赤いマス</b>の敵をタップすると戦闘予測が出る。「攻撃する」で確定。移動前に敵をタップすると、攻撃できる位置へ自動で移動する。</li>
+      <li>歩兵と対戦車兵は都市・工場・空港・司令部を<b>占領</b>できる。耐久20を部隊のHPぶんずつ削る。</li>
+      <li>拠点は毎ターン資金を生む。<b>工場と司令部</b>で地上部隊、<b>空港</b>で航空機を生産する。</li>
+      <li>自軍拠点の上にいる部隊はターン開始時にHPが2回復し、弾薬と燃料が満タンになる（航空機は空港のみ）。</li>
+      <li>航空機は移動と毎ターンの待機で<b>燃料</b>を使い、0になると墜落する。</li>
+      <li>自走砲・ロケット砲・対空ミサイルは<b>移動したターンは撃てず</b>、反撃もしない。</li>
+      <li>地形の★は防御力。森・丘・山・拠点にいると受けるダメージが減る。</li>
+      <li>敵部隊をタップすると、その部隊が次のターンに攻撃できる範囲が表示される。</li>
+      <li><b>敵の司令部を占領</b>するか、<b>敵部隊を全滅</b>させれば勝利。</li>
+    </ul>
+    <button type="button" class="btn" id="helpBack">戻る</button>
+  </div>
+</section>
+
+<section class="panel" id="pEnd" hidden>
+  <div class="box">
+    <div class="eyebrow" id="endEye" style="text-align:center">VICTORY</div>
+    <h2 id="endTitle">敵司令部を占領</h2>
+    <div class="stats" id="endStats"></div>
+    <div class="row">
+      <button type="button" class="btn primary" id="endAgain">もう一度</button>
+      <button type="button" class="btn" id="endTitleBtn">タイトルへ</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+  const store = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const fmt = n => Math.round(n).toLocaleString('ja-JP');
+  function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const LSK = 'kk.save', LSP = 'kk.prog', LSO = 'kk.opt';
+
+  // ---------- data ----------
+  const SQ3 = Math.sqrt(3), S = 32, PAD = 6, X = 99;
+  const TER = {
+    plain: { name: '平地', def: 1, mv: { foot: 1, track: 1, wheel: 2 } },
+    road: { name: '道路', def: 0, mv: { foot: 1, track: 1, wheel: 1 } },
+    bridge: { name: '橋', def: 0, mv: { foot: 1, track: 1, wheel: 1 } },
+    forest: { name: '森林', def: 2, mv: { foot: 1, track: 2, wheel: 3 } },
+    hill: { name: '丘陵', def: 2, mv: { foot: 2, track: 2, wheel: 3 } },
+    mount: { name: '山岳', def: 4, mv: { foot: 3, track: X, wheel: X } },
+    sea: { name: '海', def: 0, mv: { foot: X, track: X, wheel: X } },
+    city: { name: '都市', def: 3, mv: { foot: 1, track: 1, wheel: 1 }, prop: 1, inc: 100 },
+    factory: { name: '工場', def: 3, mv: { foot: 1, track: 1, wheel: 1 }, prop: 1, inc: 100, build: 'ground' },
+    airport: { name: '空港', def: 3, mv: { foot: 1, track: 1, wheel: 1 }, prop: 1, inc: 100, build: 'air' },
+    hq: { name: '司令部', def: 4, mv: { foot: 1, track: 1, wheel: 1 }, prop: 1, inc: 200, build: 'ground' },
+    void: { name: '', def: 0, mv: { foot: X, track: X, wheel: X } }
+  };
+  // dmg: base % against a full-strength target on 0-star ground. I=infantry V=vehicle T=armor H=helicopter A=aircraft
+  const UT = {
+    inf: { name: '歩兵', cost: 100, mv: 3, mc: 'foot', cls: 'I', ammo: 0, cap: 1, dmg: { I: 55, V: 18, T: 6, H: 8, A: 0 }, desc: '安価で拠点を占領できる' },
+    at: { name: '対戦車兵', cost: 300, mv: 2, mc: 'foot', cls: 'I', ammo: 4, cap: 1, dmg: { I: 55, V: 70, T: 55, H: 12, A: 0 }, desc: '戦車に強い歩兵。占領可' },
+    recon: { name: '偵察車', cost: 350, mv: 8, mc: 'wheel', cls: 'V', ammo: 0, dmg: { I: 70, V: 35, T: 6, H: 10, A: 0 }, desc: '高速。歩兵狩りに向く' },
+    tank: { name: '戦車', cost: 700, mv: 6, mc: 'track', cls: 'T', ammo: 8, dmg: { I: 75, V: 75, T: 55, H: 15, A: 0 }, desc: '主力。攻守のバランス型' },
+    heavy: { name: '重戦車', cost: 1400, mv: 4, mc: 'track', cls: 'T', ammo: 6, dmg: { I: 95, V: 105, T: 85, H: 22, A: 0 }, desc: '最強の地上火力。鈍足' },
+    arty: { name: '自走砲', cost: 600, mv: 5, mc: 'track', cls: 'V', rng: [2, 3], ind: 1, ammo: 6, dmg: { I: 90, V: 80, T: 65, H: 0, A: 0 }, desc: '射程2〜3の間接攻撃' },
+    rocket: { name: 'ロケット砲', cost: 1300, mv: 5, mc: 'wheel', cls: 'V', rng: [3, 5], ind: 1, ammo: 5, dmg: { I: 95, V: 90, T: 80, H: 0, A: 0 }, desc: '射程3〜5の長距離砲' },
+    aa: { name: '対空戦車', cost: 600, mv: 6, mc: 'track', cls: 'V', ammo: 8, dmg: { I: 60, V: 35, T: 10, H: 110, A: 75 }, desc: 'ヘリと航空機に強い' },
+    sam: { name: '対空ミサイル', cost: 1100, mv: 4, mc: 'wheel', cls: 'V', rng: [3, 5], ind: 1, ammo: 5, dmg: { I: 0, V: 0, T: 0, H: 120, A: 110 }, desc: '射程3〜5の対空攻撃' },
+    supply: { name: '補給車', cost: 400, mv: 6, mc: 'track', cls: 'V', sup: 1, desc: '隣の部隊に弾薬と燃料を補給' },
+    heli: { name: '攻撃ヘリ', cost: 900, mv: 6, mc: 'air', cls: 'H', air: 1, fuel: 60, burn: 2, ammo: 6, dmg: { I: 75, V: 75, T: 55, H: 65, A: 0 }, desc: '地形を無視して地上攻撃' },
+    fighter: { name: '戦闘機', cost: 1600, mv: 9, mc: 'air', cls: 'A', air: 1, fuel: 99, burn: 5, ammo: 6, dmg: { I: 0, V: 0, T: 0, H: 100, A: 95 }, desc: 'ヘリと航空機を落とす' },
+    bomber: { name: '爆撃機', cost: 2000, mv: 7, mc: 'air', cls: 'A', air: 1, fuel: 99, burn: 5, ammo: 4, dmg: { I: 110, V: 105, T: 95, H: 0, A: 0 }, desc: '地上部隊を粉砕する' }
+  };
+  const BUILD = { ground: ['inf', 'at', 'recon', 'tank', 'heavy', 'arty', 'rocket', 'aa', 'sam', 'supply'], air: ['heli', 'fighter', 'bomber'] };
+  const SIDE = [{ name: '青軍', col: '#4f8cff', dark: '#1d4aa6', light: '#a9c8ff' }, { name: '赤軍', col: '#ff5b4f', dark: '#a3271f', light: '#ffb0a8' }];
+  const NEUTRAL = '#d9d1b4';
+  const SCEN = [
+    { id: 's1', name: '国境の平原', sub: '地上戦だけの小さな戦場。まずは都市を押さえよう。', W: 13, H: 11, seed: 11, kind: 'plain', ai: 0.9, funds: 1000, air: 0 },
+    { id: 's2', name: '深緑の回廊', sub: '森が続く中規模戦。空港があり、航空機を生産できる。', W: 15, H: 13, seed: 23, kind: 'forest', ai: 1.0, funds: 1000, air: 1 },
+    { id: 's3', name: '海峡突破', sub: '海で分断された戦場。橋の争奪と航空戦がカギになる。', W: 17, H: 13, seed: 37, kind: 'strait', ai: 1.1, funds: 1200, air: 2 },
+    { id: 's4', name: '山岳要塞', sub: '山に守られた大マップ。敵の収入は青軍の1.25倍。', W: 19, H: 15, seed: 41, kind: 'mount', ai: 1.25, funds: 1200, air: 2 },
+    { id: 'rnd', name: 'ランダム戦線', sub: '毎回ちがう地形を自動生成する。', W: 15, H: 13, kind: 'random', ai: 1.0, funds: 1000, air: 2 }
+  ];
+
+  // ---------- geometry ----------
+  let G = null, CXs = null, CZs = null, NBR = null;
+  const NB = [[[1, 0], [0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]], [[1, 0], [1, -1], [0, -1], [-1, 0], [0, 1], [1, 1]]];
+  function initGeom() {
+    const W = G.W, H = G.H, N = W * H; CXs = new Int16Array(N); CZs = new Int16Array(N); NBR = [];
+    for (let i = 0; i < N; i++) {
+      const c = i % W, r = (i / W) | 0; CXs[i] = c - ((r - (r & 1)) >> 1); CZs[i] = r;
+      const L = [];
+      for (const [dc, dr] of NB[r & 1]) { const nc = c + dc, nr = r + dr; if (nc >= 0 && nr >= 0 && nc < W && nr < H && G.tiles[nr * W + nc].t !== 'void') L.push(nr * W + nc); }
+      NBR.push(L);
+    }
+  }
+  const dist = (a, b) => { const dx = CXs[a] - CXs[b], dz = CZs[a] - CZs[b]; return Math.max(Math.abs(dx), Math.abs(dz), Math.abs(dx + dz)); };
+  function cen(i) { const c = i % G.W, r = (i / G.W) | 0; return [PAD + S * SQ3 * (c + 0.5 + 0.5 * (r & 1)), PAD + S + S * 1.5 * r]; }
+  function pick(wx, wy) {
+    const x = wx - PAD - S * SQ3 / 2, y = wy - PAD - S;
+    const q = (SQ3 / 3 * x - y / 3) / S, rr = (2 / 3 * y) / S, cy = -q - rr;
+    let rx = Math.round(q), ry = Math.round(cy), rz = Math.round(rr);
+    const dx = Math.abs(rx - q), dy = Math.abs(ry - cy), dz = Math.abs(rz - rr);
+    if (dx > dy && dx > dz) rx = -ry - rz; else if (dy > dz) ry = -rx - rz; else rz = -rx - ry;
+    const r = rz, c = rx + ((r - (r & 1)) >> 1);
+    if (c < 0 || r < 0 || c >= G.W || r >= G.H) return -1;
+    return G.tiles[r * G.W + c].t === 'void' ? -1 : r * G.W + c;
+  }
+
+  // ---------- map generation (point-symmetric, so both sides get the same ground) ----------
+  function genMap(sc, seed, kind) {
+    const R = mulberry(seed), W = G.W, H = G.H, N = W * H;
+    const T = G.tiles = Array.from({ length: N }, () => ({ t: 'plain', o: -1, cp: 20 }));
+    for (let r = 1; r < H; r += 2) T[r * W + W - 1].t = 'void';
+    initGeom();
+    const mir = i => { const c = i % W, r = (i / W) | 0, mc = W - 1 - c - (r & 1); return mc < 0 ? -1 : (H - 1 - r) * W + mc; };
+    const live = i => i >= 0 && T[i].t !== 'void';
+    const set = (i, t) => { if (!live(i)) return; T[i].t = t; const m = mir(i); if (live(m)) T[m].t = t; };
+    const own = (i, s) => { T[i].o = s; const m = mir(i); if (live(m)) T[m].o = s < 0 ? -1 : 1 - s; };
+    const rc = () => { let i; do i = (R() * N) | 0; while (!live(i)); return i; };
+    const isLand = i => live(i) && (T[i].t === 'plain' || T[i].t === 'forest' || T[i].t === 'hill');
+    const blob = (i, rad, t, p, ok) => { for (let j = 0; j < N; j++) if (live(j) && dist(i, j) <= rad && R() < p && (!ok || ok(j))) set(j, t); };
+    const K = { plain: [5, 3, 1, 1, 0], forest: [12, 3, 2, 1, 0], strait: [6, 3, 1, 0, 1], mount: [6, 6, 8, 1, 0] }[kind];
+    const bHQ = (H - 2) * W + 1, rHQ = mir(bHQ);
+    if (K[4]) {
+      const [bx, by] = cen(bHQ), [rx, ry] = cen(rHQ), mx = (bx + rx) / 2, my = (by + ry) / 2, L = Math.hypot(rx - bx, ry - by), dx = (rx - bx) / L, dy = (ry - by) / L;
+      for (let j = 0; j < N; j++) if (live(j)) { const [x, y] = cen(j); if (Math.abs((x - mx) * dx + (y - my) * dy) / S < 1.1 + R() * 0.9) set(j, 'sea'); }
+    }
+    for (let k = 0; k < K[3]; k++) blob(rc(), 1, 'sea', 0.75, j => dist(j, bHQ) > 3 && dist(j, rHQ) > 3);
+    for (let k = 0; k < K[0]; k++) blob(rc(), R() < 0.4 ? 2 : 1, 'forest', 0.6, isLand);
+    for (let k = 0; k < K[1]; k++) blob(rc(), 1, 'hill', 0.55, isLand);
+    for (let k = 0; k < K[2]; k++) { let i = rc(); const n = 3 + ((R() * 4) | 0); for (let s = 0; s < n; s++) { if (isLand(i)) set(i, 'mount'); const nb = NBR[i]; i = nb[(R() * nb.length) | 0]; } }
+    for (const j of [bHQ, ...NBR[bHQ]]) set(j, 'plain');
+    set(bHQ, 'hq'); own(bHQ, 0);
+    const props = [bHQ];
+    const blueSide = j => dist(j, bHQ) < dist(j, rHQ);
+    const farFrom = (j, m) => props.every(p => dist(p, j) >= m && dist(mir(p), j) >= m);
+    const place = (j, t, o) => { if (j < 0) return -1; set(j, t); own(j, o); props.push(j); return j; };
+    const pickNear = (d1, d2) => {
+      const c = []; for (let j = 0; j < N; j++) if (isLand(j) && blueSide(j) && dist(j, bHQ) >= d1 && dist(j, bHQ) <= d2 && farFrom(j, 2)) c.push(j);
+      c.sort((a, b) => dist(a, rHQ) - dist(b, rHQ)); return c.length ? c[(R() * Math.min(4, c.length)) | 0] : -1;
+    };
+    const midPick = () => {
+      const c = []; for (let j = 0; j < N; j++) if (isLand(j) && blueSide(j) && dist(j, mir(j)) >= 3 && dist(j, bHQ) >= 4 && farFrom(j, 3)) c.push(j);
+      c.sort((a, b) => dist(a, mir(a)) - dist(b, mir(b))); return c.length ? c[(R() * Math.min(6, c.length)) | 0] : -1;
+    };
+    place(pickNear(2, 2), 'factory', 0);
+    if (W >= 17) place(pickNear(3, 4), 'factory', 0);
+    if (sc.air) place(pickNear(3, 4), 'airport', 0);
+    place(midPick(), 'factory', -1);
+    if (sc.air > 1) place(midPick(), 'airport', -1);
+    const nc = Math.round(N / 40);
+    for (let k = 0, tries = 0; k < nc && tries < 600; tries++) { const j = rc(); if (isLand(j) && dist(j, mir(j)) >= 2 && farFrom(j, 2)) { place(j, 'city', -1); k++; } }
+    // roads: a tree over each side's properties plus links across the middle
+    const rcost = j => ({ plain: 1, forest: 2.2, hill: 2.6, mount: 8, sea: K[4] ? 5 : 40, road: 0.35, bridge: 0.35, city: 1, factory: 1, airport: 1, hq: 1 })[T[j].t] ?? 999;
+    const carve = (a, b) => {
+      if (a < 0 || b < 0 || a === b) return;
+      const best = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1); best[a] = 0; const q = [a];
+      while (q.length) {
+        let bi = 0; for (let k = 1; k < q.length; k++) if (best[q[k]] < best[q[bi]]) bi = k;
+        const cur = q.splice(bi, 1)[0]; if (cur === b) break;
+        for (const n of NBR[cur]) { const v = best[cur] + rcost(n); if (v < best[n]) { best[n] = v; prev[n] = cur; q.push(n); } }
+      }
+      for (let k = prev[b]; k !== -1 && k !== a; k = prev[k]) { const t = T[k].t; if (t === 'sea') set(k, 'bridge'); else if (isLand(k) || t === 'mount') set(k, 'road'); }
+    };
+    const center = ((H - 1) >> 1) * W + ((W - 1) >> 1);
+    if (T[center].t === 'sea') set(center, 'bridge');
+    carve(bHQ, center);
+    const mine = props.slice(1).map(p => blueSide(p) ? p : mir(p)).sort((a, b) => dist(a, bHQ) - dist(b, bHQ)), linked = [bHQ];
+    for (const p of mine) { let nb = linked[0]; for (const l of linked) if (dist(l, p) < dist(nb, p)) nb = l; carve(p, nb); linked.push(p); }
+    const front = mine.slice().sort((a, b) => dist(a, rHQ) - dist(b, rHQ));
+    if (front.length > 1) carve(front[0], mir(front[1]));
+    // starting forces
+    const ring = []; for (let j = 0; j < N; j++) if (live(j) && j !== bHQ && dist(j, bHQ) <= 2 && !['sea', 'mount', 'factory', 'airport'].includes(T[j].t)) ring.push(j);
+    ring.sort((a, b) => dist(a, rHQ) - dist(b, rHQ));
+    ['tank', 'recon', 'inf', 'inf'].forEach((t, k) => { const j = ring[k]; if (j == null) return; addUnit(t, 0, j); addUnit(t, 1, mir(j)); });
+  }
+
+  // ---------- units & rules ----------
+  let busy = false, auto = false;
+  let opt = Object.assign({ speed: 0, sound: 1 }, load(LSO) || {});
+  let prog = load(LSP) || {};
+  const SPEEDS = [['標準', 130], ['高速', 55], ['瞬時', 0]];
+  const occ = new Map();
+  const scen = () => SCEN.find(s => s.id === G.sc);
+  const wait = ms => new Promise(r => setTimeout(r, Math.max(0, ms)));
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function addUnit(t, s, i, done) { const d = UT[t], u = { id: G.uid++, t, s, i, hp: 100, ammo: d.ammo || 0, fuel: d.fuel || 0, done: !!done }; G.units.push(u); occ.set(i, u); return u; }
+  function rebuildOcc() { occ.clear(); for (const u of G.units) occ.set(u.i, u); }
+  const unitAt = i => occ.get(i);
+  const hpN = u => Math.ceil(u.hp / 10);
+  const isInd = u => !!UT[u.t].ind;
+  const rng = u => UT[u.t].rng || [1, 1];
+  const hasAmmo = u => !UT[u.t].ammo || u.ammo > 0;
+  const baseDmg = (a, d) => { const t = UT[a.t].dmg; return t ? t[UT[d.t].cls] || 0 : 0; };
+  const canHit = (a, d) => a.s !== d.s && baseDmg(a, d) > 0 && hasAmmo(a);
+  const defStars = (u, i = u.i) => UT[u.t].air ? 0 : TER[G.tiles[i].t].def;
+  function calcDmg(a, d, aHp = a.hp, dHp = d.hp, di = d.i) {
+    const raw = baseDmg(a, d) * (aHp / 100) * (1 - defStars(d, di) * 0.1 * (dHp / 100));
+    return clamp(Math.round(raw), 0, dHp);
+  }
+  // counter damage from d back onto a (a standing on tile ai), with d left at hp `left`
+  function counterDmg(d, a, left, ai = a.i) {
+    if (left <= 0 || isInd(d) || dist(ai, d.i) !== 1 || !canHit(d, a)) return 0;
+    return calcDmg(d, a, left, a.hp, ai);
+  }
+  const useAmmo = u => { if (UT[u.t].ammo) u.ammo = Math.max(0, u.ammo - 1); };
+  const resupply = u => { u.ammo = UT[u.t].ammo || 0; u.fuel = UT[u.t].fuel || 0; };
+  const mvCost = (u, i) => { const t = G.tiles[i].t; if (UT[u.t].air) return t === 'void' ? X : 1; return TER[t].mv[UT[u.t].mc]; };
+  function reach(u, from = u.i) {
+    const d = UT[u.t], mp = d.air ? Math.min(d.mv, u.fuel) : d.mv;
+    const best = new Map([[from, { c: 0, p: -1 }]]), q = [from];
+    while (q.length) {
+      let bi = 0; for (let k = 1; k < q.length; k++) if (best.get(q[k]).c < best.get(q[bi]).c) bi = k;
+      const cur = q.splice(bi, 1)[0], cc = best.get(cur).c;
+      for (const n of NBR[cur]) {
+        const o = occ.get(n); if (o && o.s !== u.s) continue;
+        const v = cc + mvCost(u, n); if (v > mp) continue;
+        const b = best.get(n); if (!b || v < b.c) { best.set(n, { c: v, p: cur }); q.push(n); }
+      }
+    }
+    return best;
+  }
+  const canStop = (u, i) => { const o = occ.get(i); return !o || o === u; };
+  function pathTo(R, i) { const p = []; for (let k = i; k !== -1; k = R.get(k).p) p.unshift(k); return p; }
+  function targetsFrom(u, f) {
+    if (!UT[u.t].dmg || !hasAmmo(u)) return [];
+    const [r0, r1] = rng(u);
+    return G.units.filter(e => e.s !== u.s && baseDmg(u, e) > 0 && dist(f, e.i) >= r0 && dist(f, e.i) <= r1);
+  }
+  function attackSet(u, stops) {
+    const m = new Map();
+    for (const f of isInd(u) ? [u.i] : stops) for (const e of targetsFrom(u, f)) { if (!m.has(e.i)) m.set(e.i, []); m.get(e.i).push(f); }
+    return m;
+  }
+  function threatTiles(e) {
+    const t = new Set(); if (!UT[e.t].dmg) return t;
+    if (isInd(e)) { const [r0, r1] = rng(e); for (let j = 0; j < G.tiles.length; j++) if (G.tiles[j].t !== 'void' && dist(e.i, j) >= r0 && dist(e.i, j) <= r1) t.add(j); }
+    else for (const [i] of reach(e)) if (canStop(e, i)) { t.add(i); for (const n of NBR[i]) t.add(n); }
+    return t;
+  }
+  const canCap = (u, i = u.i) => !!UT[u.t].cap && !!TER[G.tiles[i].t].prop && G.tiles[i].o !== u.s;
+  const canBuildAt = (i, s) => { const T = G.tiles[i]; return T.o === s && !!TER[T.t].build && !occ.get(i); };
+  function income(s) { let v = 0; for (const t of G.tiles) if (t.o === s && TER[t.t].prop) v += TER[t.t].inc; return s === 1 ? Math.round(v * scen().ai / 10) * 10 : v; }
+  function build(t, i, s) { G.funds[s] -= UT[t].cost; addUnit(t, s, i, true); G.stats.built[s]++; }
+  function kill(u, by) {
+    G.units.splice(G.units.indexOf(u), 1); occ.delete(u.i);
+    const T = G.tiles[u.i]; if (T.cp < 20) T.cp = 20;
+    G.stats.kills[by]++; G.stats.lost[u.s]++; addFx('big', u.i); boom(0.12);
+  }
+  async function combat(a, d, step) {
+    const dmg = calcDmg(a, d); useAmmo(a); d.hp -= dmg;
+    addFx('boom', d.i); addFx('txt', d.i, '-' + Math.ceil(dmg / 10)); boom(0.06); await wait(step * 3);
+    if (d.hp <= 0) { kill(d, a.s); await wait(step * 2); }
+    else {
+      const c = counterDmg(d, a, d.hp);
+      if (c > 0) {
+        useAmmo(d); a.hp -= c; addFx('boom', a.i); addFx('txt', a.i, '-' + Math.ceil(c / 10)); boom(0.05); await wait(step * 3);
+        if (a.hp <= 0) { kill(a, d.s); await wait(step * 2); }
+      }
+    }
+    checkWin();
+  }
+  function capture(u) {
+    const T = G.tiles[u.i]; T.cp -= hpN(u); beep(520, 0.09, 'triangle');
+    if (T.cp <= 0) {
+      T.o = u.s; T.cp = 20; terrDirty = true; G.stats.caps[u.s]++;
+      if (!auto) toast(`${SIDE[u.s].name}が${TER[T.t].name}を占領`);
+      checkWin();
+    } else if (u.s === 0) toast(`${TER[T.t].name}を占領中… 残り耐久 ${T.cp}`);
+  }
+  function moveUnit(u, path, step) {
+    const to = path[path.length - 1];
+    occ.delete(u.i); u.i = to; occ.set(to, u);
+    if (UT[u.t].air) u.fuel = Math.max(0, u.fuel - (path.length - 1));
+    if (path.length < 2 || step <= 0) return wait(0);
+    u.anim = { path, t0: performance.now(), step }; beep(220, 0.05, 'triangle', 0.03);
+    return new Promise(r => setTimeout(() => { u.anim = null; r(); }, step * (path.length - 1) + 20));
+  }
+  function checkWin() {
+    if (!G || G.over) return true;
+    for (const s of [0, 1]) {
+      const hq = G.tiles.some(t => t.t === 'hq' && t.o === s), alive = G.units.some(u => u.s === s);
+      if (!hq || !alive) { endGame(1 - s, hq ? 'wipe' : 'hq'); return true; }
+    }
+    return false;
+  }
+
+  // ---------- turn flow ----------
+  function startTurn() {
+    const s = G.side;
+    G.funds[s] += income(s);
+    for (const u of G.units) if (u.s === s) {
+      u.done = false;
+      const T = G.tiles[u.i], d = UT[u.t];
+      const home = T.o === s && TER[T.t].prop && (d.air ? T.t === 'airport' : T.t !== 'airport');
+      if (home) { u.hp = Math.min(100, u.hp + 20); resupply(u); } else if (d.air) u.fuel -= d.burn;
+    }
+    for (const u of G.units) if (u.s === s && UT[u.t].sup) for (const n of NBR[u.i]) { const o = occ.get(n); if (o && o.s === s) resupply(o); }
+    for (const u of G.units.slice()) if (u.s === s && UT[u.t].air && u.fuel <= 0) {
+      G.units.splice(G.units.indexOf(u), 1); occ.delete(u.i); G.stats.lost[s]++; addFx('big', u.i);
+      if (!auto) toast(`${SIDE[s].name}の${UT[u.t].name}が燃料切れで墜落`);
+    }
+    if (!auto) banner(`TURN ${G.turn}　${SIDE[s].name}`, SIDE[s].col);
+    if (checkWin()) return;
+    if (s === 1 || auto) aiTurn();
+    else { busy = false; clearSel(); save(); refresh(); }
+  }
+  function endTurn() { clearSel(); G.side = 1 - G.side; if (G.side === 0) G.turn++; startTurn(); }
+
+  // ---------- AI ----------
+  function computeThreat(s) {
+    const N = G.tiles.length, th = {}; for (const c of 'IVTHA') th[c] = new Float32Array(N);
+    for (const e of G.units) if (e.s !== s && UT[e.t].dmg && hasAmmo(e)) {
+      const tiles = threatTiles(e);
+      for (const c of 'IVTHA') { const v = (UT[e.t].dmg[c] || 0) * e.hp / 100; if (v) for (const j of tiles) if (v > th[c][j]) th[c][j] = v; }
+    }
+    return th;
+  }
+  function field(u, goals) {
+    const N = G.tiles.length, f = new Float32Array(N).fill(1e9), q = [];
+    for (const g of goals) { f[g] = 0; q.push(g); }
+    while (q.length) {
+      let bi = 0; for (let k = 1; k < q.length; k++) if (f[q[k]] < f[q[bi]]) bi = k;
+      const cur = q.splice(bi, 1)[0], step = mvCost(u, cur);
+      if (step >= X) continue;
+      for (const n of NBR[cur]) { if (mvCost(u, n) >= X) continue; const v = f[cur] + step; if (v < f[n]) { f[n] = v; q.push(n); } }
+    }
+    return f;
+  }
+  function aiPlan(u, th, rnd) {
+    const d = UT[u.t], s = u.s, foe = 1 - s;
+    const R = reach(u), stops = [...R.keys()].filter(i => canStop(u, i));
+    const tiles = G.tiles.map((t, i) => i);
+    const foes = G.units.filter(e => e.s === foe);
+    let mode = 'fight', goals = [];
+    if (d.air) {
+      const ap = tiles.filter(i => G.tiles[i].t === 'airport' && G.tiles[i].o === s);
+      if (ap.length) { const fa = field(u, ap); if (u.fuel <= fa[u.i] + d.burn * 2 + 3) { mode = 'home'; goals = ap; } }
+    }
+    if (mode === 'fight' && u.hp <= 30 && d.cost >= 600) {
+      const rp = tiles.filter(i => { const T = G.tiles[i]; return T.o === s && TER[T.t].prop && (d.air ? T.t === 'airport' : T.t !== 'airport') && canStop(u, i); });
+      if (rp.length) { mode = 'repair'; goals = rp; }
+    }
+    if (mode === 'fight' && d.cap) {
+      const cp = tiles.filter(i => { const T = G.tiles[i], o = occ.get(i); return TER[T.t].prop && T.o !== s && (!o || o === u || o.s !== s); });
+      if (cp.length) { mode = 'cap'; goals = cp; }
+    }
+    if (mode === 'fight') {
+      if (d.sup) goals = G.units.filter(o => o.s === s && o !== u && !UT[o.t].air).map(o => o.i);
+      else {
+        goals = foes.filter(e => baseDmg(u, e) > 0).map(e => e.i);
+        if (!d.air && d.dmg && d.dmg.T > 0) goals.push(...tiles.filter(i => G.tiles[i].t === 'hq' && G.tiles[i].o === foe));
+        if (!goals.length) goals = tiles.filter(i => G.tiles[i].o === s && (G.tiles[i].t === (d.air ? 'airport' : 'hq')));
+      }
+    }
+    const F = goals.length ? field(u, goals) : null;
+    const [r0, r1] = rng(u);
+    let best = null;
+    for (const i of stops) {
+      const T = G.tiles[i], td = TER[T.t];
+      let sc = 0;
+      const fd = F ? Math.min(F[i], 60) : 0;
+      sc -= (isInd(u) && mode === 'fight' ? Math.max(0, fd - r1) : fd) * 10;
+      if (isInd(u) && foes.some(e => dist(i, e.i) < r0)) sc -= 30;
+      sc += defStars(u, i) * 6;
+      sc -= (th[d.cls][i] || 0) / 100 * d.cost * (u.hp / 100) * (mode === 'cap' ? 0.08 : 0.15);
+      if (T.o === s && td.build && mode !== 'repair' && mode !== 'home') sc -= 40;
+      if (mode === 'repair' && T.o === s && td.prop) sc += 150;
+      if (mode === 'home' && T.t === 'airport' && T.o === s) sc += 300;
+      if (!d.cap && td.prop && T.o !== s) sc -= 20;
+      let act = null, av = 0;
+      if (canCap(u, i)) { av = 260 + (T.t === 'hq' ? 4000 : td.build ? 120 : 0) + (i === u.i ? 150 : 0) + (hpN(u) >= T.cp ? 200 : 0); act = { k: 'cap' }; }
+      if (!isInd(u) || i === u.i) for (const e of targetsFrom(u, i)) {
+        const dmg = calcDmg(u, e), left = e.hp - dmg, cd = counterDmg(e, u, left, i);
+        let v = dmg / 100 * UT[e.t].cost * (left <= 0 ? 1.6 : 1) - cd / 100 * d.cost * 0.9;
+        const eT = G.tiles[e.i]; if (eT.o === s && eT.cp < 20) v += 250;
+        if (eT.t === 'hq' && UT[e.t].cap) v += 400;
+        if (v > 0 && v > av) { av = v; act = { k: 'atk', e }; }
+      }
+      const tot = sc + av + rnd() * 4;
+      if (!best || tot > best.tot) best = { i, act, tot, path: pathTo(R, i) };
+    }
+    return best;
+  }
+  async function aiExec(u, p, step) {
+    if (!p) { u.done = true; return; }
+    const orig = u.i;
+    if (p.i !== u.i) await moveUnit(u, p.path, step);
+    if (orig !== u.i && G.tiles[orig].cp < 20) G.tiles[orig].cp = 20;
+    if (p.act && p.act.k === 'atk') { const e = p.act.e; if (G.units.includes(e) && targetsFrom(u, u.i).includes(e)) { await wait(step); await combat(u, e, step); } }
+    else if (p.act && p.act.k === 'cap' && canCap(u)) capture(u);
+    if (G.units.includes(u)) u.done = true;
+  }
+  function aiBuild(s, rnd) {
+    const mine = G.units.filter(u => u.s === s), theirs = G.units.filter(u => u.s !== s);
+    const cnt = (...ts) => mine.filter(u => ts.includes(u.t)).length;
+    const foeAir = theirs.filter(u => UT[u.t].air).length, foeArmor = theirs.filter(u => UT[u.t].cls === 'T').length;
+    const capLeft = G.tiles.filter(t => TER[t.t].prop && t.o < 0).length;
+    const fhq = G.tiles.findIndex(t => t.t === 'hq' && t.o !== s);
+    const spots = G.tiles.map((t, i) => i).filter(i => canBuildAt(i, s)).sort((a, b) => (fhq < 0 ? 0 : dist(a, fhq) - dist(b, fhq)));
+    const wpick = list => { const ok = list.filter(([t, w]) => w > 0 && UT[t].cost <= G.funds[s]); const tot = ok.reduce((a, [, w]) => a + w, 0); let r = rnd() * tot; for (const [t, w] of ok) if ((r -= w) <= 0) return t; return null; };
+    for (const i of spots) {
+      const air = TER[G.tiles[i].t].build === 'air', f = G.funds[s];
+      let t = null;
+      if (air) {
+        if (foeAir > cnt('fighter') && f >= 1600) t = 'fighter';
+        else if (rnd() < 0.7) t = wpick([['bomber', 2], ['heli', 3]]);
+      } else {
+        const infs = cnt('inf', 'at'), aaN = cnt('aa', 'sam', 'fighter');
+        if (foeAir > aaN && f >= 600) t = f >= 1100 && rnd() < 0.4 ? 'sam' : 'aa';
+        else if (infs < Math.min(4, 2 + capLeft / 2) && infs < mine.length * 0.45 + 1) t = foeArmor >= 2 && f >= 300 && rnd() < 0.4 ? 'at' : 'inf';
+        else t = wpick([['heavy', 3], ['tank', 5], ['arty', 2], ['rocket', 1.5], ['at', foeArmor * 1.2], ['recon', G.turn < 6 ? 1 : 0.2], ['inf', 1], ['supply', mine.length > 8 && !cnt('supply') ? 0.6 : 0]]);
+      }
+      if (t && G.funds[s] >= UT[t].cost) build(t, i, s);
+    }
+  }
+  async function aiTurn() {
+    busy = true; refresh();
+    const g0 = G, s = G.side, step = auto ? 0 : SPEEDS[opt.speed][1];
+    const rnd = mulberry(G.seed * 31 + G.turn * 977 + s * 7);
+    const th = computeThreat(s);
+    const pri = u => isInd(u) ? 0 : UT[u.t].cap ? 2 : 1;
+    const order = G.units.filter(u => u.s === s && !u.done).sort((a, b) => pri(a) - pri(b) || UT[b.t].cost - UT[a.t].cost);
+    await wait(step * 3);
+    for (const u of order) {
+      if (G !== g0 || G.over || G.halt) return;
+      if (!G.units.includes(u)) continue;
+      const p = aiPlan(u, th, rnd);
+      await aiExec(u, p, step);
+      if (G !== g0 || G.over || G.halt) return;
+      if (step) await wait(step * 1.5);
+    }
+    aiBuild(s, rnd);
+    await wait(step * 3);
+    if (G === g0 && !G.over && !G.halt) endTurn();
+  }
+
+  // ---------- game setup / save ----------
+  function newGame(id) {
+    const sc = SCEN.find(x => x.id === id);
+    const seed = sc.kind === 'random' ? (Math.random() * 1e9) | 0 : sc.seed;
+    const kind = sc.kind === 'random' ? ['plain', 'forest', 'strait', 'mount'][seed % 4] : sc.kind;
+    G = { sc: id, W: sc.W, H: sc.H, seed, kind, tiles: null, units: [], uid: 1, turn: 1, side: 0, funds: [sc.funds, sc.funds], stats: { kills: [0, 0], lost: [0, 0], built: [0, 0], caps: [0, 0] }, over: 0 };
+    occ.clear(); genMap(sc, seed, kind); terrDirty = true;
+  }
+  function save() {
+    if (!G || G.over || auto) return;
+    store(LSK, { v: 1, sc: G.sc, W: G.W, H: G.H, seed: G.seed, kind: G.kind, uid: G.uid, turn: G.turn, side: G.side, funds: G.funds, stats: G.stats, tiles: G.tiles.map(t => [t.t, t.o, t.cp]), units: G.units.map(u => [u.id, u.t, u.s, u.i, u.hp, u.ammo, u.fuel, u.done ? 1 : 0]) });
+  }
+  function restore(d) {
+    try {
+      if (!d || d.v !== 1 || !SCEN.some(s => s.id === d.sc)) return false;
+      G = { sc: d.sc, W: d.W, H: d.H, seed: d.seed, kind: d.kind, uid: d.uid, turn: d.turn, side: d.side, funds: d.funds, stats: d.stats, over: 0, tiles: d.tiles.map(([t, o, cp]) => ({ t, o, cp })), units: d.units.map(a => ({ id: a[0], t: a[1], s: a[2], i: a[3], hp: a[4], ammo: a[5], fuel: a[6], done: !!a[7] })) };
+      initGeom(); rebuildOcc(); terrDirty = true; return true;
+    } catch { G = null; return false; }
+  }
+
+  // ---------- rendering ----------
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let dpr = 1, VW = 0, VH = 0, WW = 0, WH = 0, fitZ = 1, terr = null, terrK = 1, terrDirty = true;
+  const cam = { x: 0, y: 0, z: 1 };
+  const fx = [];
+  function worldSize() { WW = PAD * 2 + S * SQ3 * (G.W + 0.5); WH = PAD * 2 + S * 2 + S * 1.5 * (G.H - 1); }
+  function viewArea() { return { top: $('top').getBoundingClientRect().bottom - 6, bot: $('bottom').getBoundingClientRect().top + 10 }; }
+  function resize() { dpr = Math.min(2, devicePixelRatio || 1); VW = innerWidth; VH = innerHeight; cv.width = Math.round(VW * dpr); cv.height = Math.round(VH * dpr); if (G) clampCam(); }
+  function clampCam() {
+    const vw = VW / cam.z, vh = VH / cam.z, { top, bot } = viewArea(), mT = top / cam.z, mB = (VH - bot) / cam.z, avail = vh - mT - mB;
+    cam.x = WW <= vw ? (WW - vw) / 2 : clamp(cam.x, -24 / cam.z, WW - vw + 24 / cam.z);
+    cam.y = WH <= avail ? (WH - avail) / 2 - mT : clamp(cam.y, -mT - 24 / cam.z, WH - vh + mB + 24 / cam.z);
+  }
+  function fitCam() {
+    worldSize(); const { top, bot } = viewArea();
+    fitZ = Math.min(VW / WW, Math.max(120, bot - top) / WH);
+    cam.z = clamp(fitZ, 0.72, 1.5); clampCam();
+  }
+  function centerOn(i) { const [x, y] = cen(i), { top, bot } = viewArea(); cam.x = x - VW / 2 / cam.z; cam.y = y - (top + bot) / 2 / cam.z; clampCam(); }
+  function zoomAt(sx, sy, nz) { nz = clamp(nz, Math.min(fitZ, 0.6) * 0.9, 2.4); const wx = sx / cam.z + cam.x, wy = sy / cam.z + cam.y; cam.z = nz; cam.x = wx - sx / nz; cam.y = wy - sy / nz; clampCam(); }
+  function hexPath(c, x, y, r) { c.beginPath(); for (let k = 0; k < 6; k++) { const a = Math.PI / 180 * (60 * k - 90); c.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); } c.closePath(); }
+  const TC = { plain: '#64804b', road: '#64804b', bridge: '#2b5a78', forest: '#41693b', hill: '#7f7f4e', mount: '#706559', sea: '#2b5a78', city: '#6a7660', factory: '#6a7660', airport: '#6a7660', hq: '#6a7660' };
+  const roadish = i => ['road', 'bridge'].includes(G.tiles[i].t);
+  function ownCol(o) { return o < 0 ? NEUTRAL : SIDE[o].col; }
+  function drawTerrain() {
+    worldSize(); terrK = Math.min(2.5, 2600 / WW);
+    terr = terr || document.createElement('canvas'); terr.width = Math.ceil(WW * terrK); terr.height = Math.ceil(WH * terrK);
+    const c = terr.getContext('2d'); c.setTransform(terrK, 0, 0, terrK, 0, 0); c.clearRect(0, 0, WW, WH);
+    const N = G.tiles.length;
+    for (let i = 0; i < N; i++) {
+      const t = G.tiles[i].t; if (t === 'void') continue;
+      const [x, y] = cen(i), R = mulberry(i * 7919 + 13);
+      hexPath(c, x, y, S + 0.6); c.fillStyle = TC[t]; c.fill();
+      if (t === 'plain') { c.strokeStyle = '#7a9559'; c.lineWidth = 1.4; for (let k = 0; k < 4; k++) { const px = x + (R() - 0.5) * 34, py = y + (R() - 0.5) * 30; c.beginPath(); c.moveTo(px - 2, py); c.lineTo(px, py - 3); c.lineTo(px + 2, py); c.stroke(); } }
+      else if (t === 'forest') { for (let k = 0; k < 6; k++) { const px = x + (R() - 0.5) * 32, py = y + (R() - 0.5) * 28, r = 5 + R() * 3; c.fillStyle = '#28492a'; c.beginPath(); c.arc(px + 1, py + 1.5, r, 0, 7); c.fill(); c.fillStyle = '#4f8046'; c.beginPath(); c.arc(px, py, r, 0, 7); c.fill(); c.fillStyle = '#63984f'; c.beginPath(); c.arc(px - r * 0.3, py - r * 0.3, r * 0.45, 0, 7); c.fill(); } }
+      else if (t === 'hill') { for (const [ox, oy, w] of [[-8, 5, 13], [9, -3, 11]]) { c.fillStyle = '#929158'; c.beginPath(); c.ellipse(x + ox, y + oy, w, w * 0.62, 0, Math.PI, 0); c.fill(); c.strokeStyle = '#a7a66a'; c.lineWidth = 1.3; c.beginPath(); c.ellipse(x + ox, y + oy, w * 0.6, w * 0.36, 0, Math.PI, 0); c.stroke(); } }
+      else if (t === 'mount') { for (const [ox, oy, h] of [[-9, 8, 20], [8, 6, 26], [0, 12, 16]]) { const bx = x + ox, by = y + oy; c.fillStyle = '#8f8376'; c.beginPath(); c.moveTo(bx - h * 0.62, by); c.lineTo(bx, by - h); c.lineTo(bx + h * 0.62, by); c.fill(); c.fillStyle = '#5a5148'; c.beginPath(); c.moveTo(bx, by - h); c.lineTo(bx + h * 0.62, by); c.lineTo(bx + h * 0.1, by); c.fill(); c.fillStyle = '#ebe6dc'; c.beginPath(); c.moveTo(bx - h * 0.2, by - h * 0.68); c.lineTo(bx, by - h); c.lineTo(bx + h * 0.2, by - h * 0.68); c.fill(); } }
+      else if (t === 'sea' || t === 'bridge') { c.strokeStyle = '#3e7292'; c.lineWidth = 1.5; for (let k = 0; k < 3; k++) { const px = x + (R() - 0.5) * 28, py = y + (R() - 0.5) * 26; c.beginPath(); c.moveTo(px - 6, py); c.quadraticCurveTo(px - 3, py - 3, px, py); c.quadraticCurveTo(px + 3, py + 3, px + 6, py); c.stroke(); } }
+    }
+    // roads and bridges: half-segments toward each connected neighbour
+    for (const pass of [0, 1]) for (let i = 0; i < N; i++) {
+      const t = G.tiles[i].t, ri = roadish(i); if (!ri && !TER[t].prop) continue;
+      const [x, y] = cen(i); let any = false;
+      for (const n of NBR[i]) {
+        if (!(ri || roadish(n)) || !(roadish(n) || TER[G.tiles[n].t].prop)) continue;
+        any = true; const [nx, ny] = cen(n), mx = (x + nx) / 2, my = (y + ny) / 2;
+        const br = t === 'bridge';
+        c.strokeStyle = pass ? (br ? '#a5835a' : '#cdbb8a') : (br ? '#3b2c1c' : '#7f704b'); c.lineWidth = pass ? (br ? 9 : 6) : (br ? 13 : 9); c.lineCap = 'round';
+        c.beginPath(); c.moveTo(x, y); c.lineTo(mx, my); c.stroke();
+      }
+      if (ri && !any && pass) { c.fillStyle = '#cdbb8a'; c.beginPath(); c.arc(x, y, 4, 0, 7); c.fill(); }
+    }
+    for (let i = 0; i < N; i++) {
+      const T = G.tiles[i]; if (!TER[T.t].prop) continue;
+      const [x, y] = cen(i), col = ownCol(T.o), dk = T.o < 0 ? '#6f6a55' : SIDE[T.o].dark;
+      hexPath(c, x, y, S - 3); c.strokeStyle = col; c.lineWidth = 3; c.stroke();
+      c.lineWidth = 1.5; c.strokeStyle = '#151a16';
+      if (T.t === 'city') { for (const [ox, w, h] of [[-12, 8, 13], [-3, 8, 20], [6, 8, 15]]) { c.fillStyle = col; c.fillRect(x + ox, y + 8 - h, w, h); c.strokeRect(x + ox, y + 8 - h, w, h); c.fillStyle = dk; for (let wy = y + 11 - h; wy < y + 5; wy += 5) c.fillRect(x + ox + 2, wy, w - 4, 2); } }
+      else if (T.t === 'factory') { c.fillStyle = col; c.beginPath(); c.moveTo(x - 14, y + 9); c.lineTo(x - 14, y - 2); for (let k = 0; k < 3; k++) { c.lineTo(x - 14 + k * 8 + 8, y - 8); c.lineTo(x - 14 + k * 8 + 8, y - 2); } c.lineTo(x + 14, y - 2); c.lineTo(x + 14, y + 9); c.closePath(); c.fill(); c.stroke(); c.fillRect(x + 8, y - 16, 4, 10); c.strokeRect(x + 8, y - 16, 4, 10); c.fillStyle = dk; c.fillRect(x - 9, y + 2, 5, 7); c.fillRect(x + 1, y + 2, 5, 7); }
+      else if (T.t === 'airport') { c.save(); c.translate(x, y); c.rotate(-0.5); c.fillStyle = '#3a3f3b'; c.fillRect(-19, -5, 38, 10); c.strokeStyle = '#e8e6da'; c.setLineDash([4, 4]); c.lineWidth = 1.5; c.beginPath(); c.moveTo(-16, 0); c.lineTo(16, 0); c.stroke(); c.setLineDash([]); c.restore(); c.fillStyle = col; c.strokeStyle = '#151a16'; c.fillRect(x + 4, y - 15, 7, 11); c.strokeRect(x + 4, y - 15, 7, 11); c.fillRect(x + 2, y - 18, 11, 4); c.strokeRect(x + 2, y - 18, 11, 4); }
+      else if (T.t === 'hq') { c.fillStyle = col; c.fillRect(x - 13, y - 2, 26, 12); c.strokeRect(x - 13, y - 2, 26, 12); c.beginPath(); c.moveTo(x - 15, y - 2); c.lineTo(x, y - 10); c.lineTo(x + 15, y - 2); c.closePath(); c.fill(); c.stroke(); c.strokeStyle = '#151a16'; c.beginPath(); c.moveTo(x, y - 10); c.lineTo(x, y - 24); c.stroke(); c.fillStyle = col; c.beginPath(); c.moveTo(x, y - 24); c.lineTo(x + 11, y - 20); c.lineTo(x, y - 16); c.fill(); c.stroke(); c.fillStyle = dk; c.fillRect(x - 3, y + 3, 6, 7); }
+    }
+    c.strokeStyle = 'rgba(10, 20, 12, 0.32)'; c.lineWidth = 1;
+    for (let i = 0; i < N; i++) if (G.tiles[i].t !== 'void') { const [x, y] = cen(i); hexPath(c, x, y, S); c.stroke(); }
+    terrDirty = false;
+  }
+  function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+  function framePath(c, air) { if (air) { c.beginPath(); c.moveTo(-15, 11); c.lineTo(-15, 1); c.bezierCurveTo(-15, -14, 15, -14, 15, 1); c.lineTo(15, 11); c.closePath(); } else rr(c, -15, -11, 30, 22, 3); }
+  const PLANE = { fighter: [[0, -10], [2, -4], [11, 3], [11, 5.5], [2, 3], [1.6, 7], [4.5, 9], [4.5, 10]], bomber: [[0, -10], [2.2, -6], [14, 0], [14, 3], [2.2, 1], [1.8, 6], [6, 8.5], [6, 10]] };
+  function drawToken(c, t, s, x, y, k, hp, dim) {
+    const d = UT[t], sd = SIDE[s];
+    c.save(); c.translate(x, y); c.scale(k, k);
+    c.save(); c.translate(1.5, 2.5); framePath(c, d.air); c.fillStyle = 'rgba(0,0,0,0.42)'; c.fill(); c.restore();
+    framePath(c, d.air); c.fillStyle = sd.dark; c.fill(); c.lineWidth = 2; c.strokeStyle = sd.col; c.stroke();
+    c.save(); framePath(c, d.air); c.clip();
+    c.strokeStyle = '#fff'; c.fillStyle = '#fff'; c.lineWidth = 1.8; c.lineCap = 'round'; c.lineJoin = 'round';
+    const L = (...p) => { c.beginPath(); c.moveTo(p[0], p[1]); for (let j = 2; j < p.length; j += 2) c.lineTo(p[j], p[j + 1]); c.stroke(); };
+    const dot = (px, py, r) => { c.beginPath(); c.arc(px, py, r, 0, 7); c.fill(); };
+    const ell = (rx, ry) => { c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, 7); c.stroke(); };
+    switch (t) {
+      case 'inf': L(-15, -11, 15, 11); L(-15, 11, 15, -11); break;
+      case 'at': c.lineWidth = 1.4; L(-15, -11, 15, 11); L(-15, 11, 15, -11); c.lineWidth = 2.2; L(-11, 11, 0, -7, 11, 11); break;
+      case 'recon': L(-15, 11, 15, -11); break;
+      case 'tank': ell(10, 5.5); break;
+      case 'heavy': ell(10.5, 6); c.lineWidth = 1.4; ell(6, 2.6); break;
+      case 'arty': c.lineWidth = 1.4; ell(10.5, 6); dot(0, 0, 3); break;
+      case 'rocket': dot(-6, 0, 2.4); dot(0, 0, 2.4); dot(6, 0, 2.4); L(-11, 6, 11, 6); break;
+      case 'aa': c.beginPath(); c.arc(0, 11, 11, Math.PI, 0); c.stroke(); break;
+      case 'sam': c.beginPath(); c.arc(0, 11, 11, Math.PI, 0); c.stroke(); L(0, 8, 0, -7); L(-3.5, -3.5, 0, -7, 3.5, -3.5); break;
+      case 'supply': L(-15, 4, 15, 4); dot(-6, -3, 2); dot(6, -3, 2); break;
+      case 'heli': c.beginPath(); c.moveTo(-10, -4); c.lineTo(10, 6); c.lineTo(10, -4); c.lineTo(-10, 6); c.closePath(); c.fill(); break;
+      case 'fighter': case 'bomber': { const h = PLANE[t]; c.beginPath(); h.forEach(([px, py]) => c.lineTo(px, py + 1.5)); for (let j = h.length - 1; j >= 0; j--) c.lineTo(-h[j][0], h[j][1] + 1.5); c.closePath(); c.fill(); break; }
+    }
+    c.restore();
+    if (dim) { framePath(c, d.air); c.fillStyle = 'rgba(14, 18, 15, 0.55)'; c.fill(); }
+    if (hp < 100) { rr(c, 7, 3, 13, 13, 3); c.fillStyle = '#0d1411'; c.fill(); c.lineWidth = 1.2; c.strokeStyle = sd.col; c.stroke(); c.fillStyle = '#fff'; c.font = '800 10.5px Oxanium, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(Math.ceil(hp / 10)), 13.5, 10); }
+    c.restore();
+  }
+  function addFx(k, i, v) { const [x, y] = cen(i); fx.push({ k, x, y, v, t0: performance.now() }); }
+  function unitPos(u, now) {
+    if (u.anim) { const { path, t0, step } = u.anim, e = (now - t0) / step, k = Math.floor(e); if (k < path.length - 1) { const [ax, ay] = cen(path[k]), [bx, by] = cen(path[k + 1]), f = e - k; return [ax + (bx - ax) * f, ay + (by - ay) * f]; } return cen(path[path.length - 1]); }
+    return cen(u.i);
+  }
+  function fillHexes(set, col, line) { for (const i of set) { const [x, y] = cen(i); hexPath(ctx, x, y, S - 1.5); ctx.fillStyle = col; ctx.fill(); if (line) { ctx.strokeStyle = line; ctx.lineWidth = 1.5; ctx.stroke(); } } }
+  function frame(now) {
+    requestAnimationFrame(frame);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#0d1411'; ctx.fillRect(0, 0, VW, VH);
+    if (!G || !G.tiles) return;
+    if (terrDirty) drawTerrain();
+    const z = cam.z * dpr; ctx.setTransform(z, 0, 0, z, -cam.x * z, -cam.y * z);
+    ctx.drawImage(terr, 0, 0, WW, WH);
+    if (ui.threat) fillHexes(ui.threat, 'rgba(255, 150, 40, 0.28)', 'rgba(255, 170, 60, 0.5)');
+    if (ui.mode === 'sel') { fillHexes(ui.stops, 'rgba(79, 140, 255, 0.34)', 'rgba(140, 180, 255, 0.55)'); fillHexes(ui.atk.keys(), 'rgba(255, 70, 60, 0.45)', 'rgba(255, 140, 130, 0.8)'); }
+    if ((ui.mode === 'act' || ui.mode === 'fc') && ui.tg) fillHexes(ui.tg.map(e => e.i), 'rgba(255, 70, 60, 0.45)', 'rgba(255, 140, 130, 0.8)');
+    const pulse = 0.5 + 0.5 * Math.sin(now / 180);
+    if (ui.sel) { const [x, y] = unitPos(ui.sel, now); hexPath(ctx, x, y, S - 3); ctx.strokeStyle = `rgba(242, 193, 78, ${0.55 + pulse * 0.45})`; ctx.lineWidth = 3; ctx.stroke(); }
+    if (ui.tgt) { const [x, y] = cen(ui.tgt.i); hexPath(ctx, x, y, S - 3); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); }
+    if (ui.tile >= 0 && !ui.sel) { const [x, y] = cen(ui.tile); hexPath(ctx, x, y, S - 3); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2.5; ctx.stroke(); }
+    for (let i = 0; i < G.tiles.length; i++) { const T = G.tiles[i]; if (T.cp < 20) { const [x, y] = cen(i); ctx.fillStyle = '#0d1411'; ctx.fillRect(x - 15, y - 25, 30, 6); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x - 14, y - 24, 28 * T.cp / 20, 4); } }
+    for (const u of G.units) { const [x, y] = unitPos(u, now), bob = u === ui.sel ? Math.sin(now / 160) * 1.5 : 0; drawToken(ctx, u.t, u.s, x, y + 3 + bob, 1, u.hp, u.done && u.s === G.side); }
+    for (let k = fx.length - 1; k >= 0; k--) {
+      const f = fx[k], a = now - f.t0;
+      if (f.k === 'txt') { if (a > 900) { fx.splice(k, 1); continue; } ctx.globalAlpha = 1 - a / 900; ctx.font = '800 17px Oxanium, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeStyle = '#0d1411'; ctx.strokeText(f.v, f.x, f.y - 18 - a / 40); ctx.fillStyle = '#ff7b6f'; ctx.fillText(f.v, f.x, f.y - 18 - a / 40); ctx.globalAlpha = 1; }
+      else { const dur = f.k === 'big' ? 700 : 450; if (a > dur) { fx.splice(k, 1); continue; } const p = a / dur, r = (f.k === 'big' ? 30 : 18) * (0.3 + p); ctx.fillStyle = `rgba(255, 170, 60, ${0.75 * (1 - p)})`; ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, 7); ctx.fill(); ctx.fillStyle = `rgba(255, 245, 200, ${1 - p})`; ctx.beginPath(); ctx.arc(f.x, f.y, r * 0.45, 0, 7); ctx.fill(); }
+    }
+  }
+
+  // ---------- sound ----------
+  let ac = null, noiseBuf = null;
+  function actx() { if (!opt.sound) return null; try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); return ac; } catch { return null; } }
+  function beep(f, d, type = 'square', v = 0.04) { const a = actx(); if (!a || auto) return; try { const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(v, a.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + d); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + d); } catch {} }
+  function boom(v) {
+    const a = actx(); if (!a || auto) return;
+    try {
+      if (!noiseBuf) { noiseBuf = a.createBuffer(1, a.sampleRate * 0.5, a.sampleRate); const ch = noiseBuf.getChannelData(0); for (let k = 0; k < ch.length; k++) ch[k] = (Math.random() * 2 - 1) * (1 - k / ch.length); }
+      const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(); s.buffer = noiseBuf; f.type = 'lowpass'; f.frequency.value = 700; g.gain.value = v; s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+    } catch {}
+  }
+
+  // ---------- UI ----------
+  const ui = { mode: 'idle', sel: null, R: null, stops: null, atk: null, tg: null, tgt: null, threat: null, tile: -1, orig: -1, origFuel: 0 };
+  let toastT = 0;
+  function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 1800); }
+  function banner(t, col) { const b = $('banner'); b.textContent = t; b.style.color = col || '#fff'; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
+  function setActs(list) {
+    const a = $('acts'); a.replaceChildren();
+    for (const o of list) { const b = el('button', 'act' + (o.cls ? ' ' + o.cls : ''), o.label); b.type = 'button'; b.onclick = () => { if (!busy) o.fn(); }; a.append(b); }
+    a.hidden = !list.length;
+  }
+  const info = (...n) => $('info').replaceChildren(...n);
+  const hint = t => info(el('div', 'hint', t));
+  function iconCv(t, s, px, hp) { const c = el('canvas', 'uic'), k = Math.min(2, devicePixelRatio || 1); c.width = c.height = Math.round(px * k); c.style.width = c.style.height = px + 'px'; const x = c.getContext('2d'); x.scale(k, k); drawToken(x, t, s, px / 2, px / 2 + 1, px / 36, hp == null ? 100 : hp, false); return c; }
+  function unitCard(u) {
+    const d = UT[u.t], T = G.tiles[u.i], row = el('div', 'iu'), b = el('div', 'ub'), n = el('div', 'un');
+    n.append(el('b', null, d.name), el('span', 'sd s' + u.s, SIDE[u.s].name));
+    if (u.done && u.s === G.side) n.append(el('span', 'rk', '行動済'));
+    const hp = el('div', 'hp'), bar = el('i'); bar.style.width = u.hp + '%'; bar.style.background = u.hp > 60 ? 'var(--ok)' : u.hp > 30 ? 'var(--gold)' : 'var(--red)'; hp.append(bar);
+    const p = [`HP ${hpN(u)}/10`, `移動 ${d.mv}`]; if (d.rng) p.push(`射程 ${d.rng[0]}-${d.rng[1]}`); if (d.ammo) p.push(`弾 ${u.ammo}/${d.ammo}`); if (d.fuel) p.push(`燃料 ${u.fuel}`);
+    p.push(TER[T.t].name + ('★'.repeat(defStars(u)) || ''));
+    b.append(n, hp, el('div', 'us', p.join(' · ')));
+    row.append(iconCv(u.t, u.s, 40, u.hp), b); return row;
+  }
+  function tileCard(i) {
+    const T = G.tiles[i], td = TER[T.t], w = el('div', 'ub'), r = el('div', 'it');
+    r.append(el('b', null, td.name), el('span', 'st', '★'.repeat(td.def) || '★なし'));
+    if (td.prop) r.append(el('span', 'sd ' + (T.o < 0 ? 'n' : 's' + T.o), T.o < 0 ? '中立' : SIDE[T.o].name));
+    w.append(r);
+    const m = [];
+    if (td.prop) m.push(`収入 +${td.inc}`);
+    if (td.build) m.push(td.build === 'air' ? '航空機を生産' : '地上部隊を生産');
+    if (T.cp < 20) m.push(`占領耐久 ${T.cp}/20`);
+    const mv = td.mv; if (T.t !== 'void') m.push(mv.foot >= X ? '地上部隊は進入不可' : `移動コスト 歩${mv.foot} 装軌${mv.track >= X ? '×' : mv.track} 車輪${mv.wheel >= X ? '×' : mv.wheel}`);
+    w.append(el('div', 'us', m.join(' · ')));
+    return w;
+  }
+  function fcCard(a, e) {
+    const dmg = calcDmg(a, e), left = e.hp - dmg, cd = counterDmg(e, a, left);
+    const w = el('div', 'fc'), b = el('div', 'ub');
+    const l1 = el('div', 'un'); l1.append(el('span', 'tag', '戦闘予測'), el('b', null, `${UT[a.t].name} → ${UT[e.t].name}`));
+    const l2 = el('div', 'v');
+    if (left <= 0) { l2.append('敵HP ' + hpN(e) + ' → '); l2.append(el('em', null, '撃破')); }
+    else { l2.append(`敵HP ${hpN(e)} → `); l2.append(el('em', null, String(Math.ceil(left / 10)))); }
+    const l3 = el('div', 'us', left <= 0 ? '反撃なし' : cd > 0 ? `反撃 自HP ${hpN(a)} → ${Math.max(0, Math.ceil((a.hp - cd) / 10))}` : '反撃なし');
+    b.append(l1, l2, l3); w.append(iconCv(e.t, e.s, 40, e.hp), b); return w;
+  }
+  function idleHint() {
+    if (!G || G.over) return;
+    if (G.side !== 0 || auto) { hint(`${SIDE[G.side].name}が作戦行動中…`); return; }
+    const n = G.units.filter(u => u.s === 0 && !u.done).length;
+    hint(n ? `未行動の部隊 ${n}。部隊をタップで選択、工場・空港・司令部をタップで生産。` : '全部隊が行動済み。生産するか「ターン終了」を押す。');
+  }
+  function refresh() {
+    if (!G) return;
+    $('turnNo').textContent = G.turn; $('sideDot').style.background = SIDE[G.side].col;
+    $('funds').textContent = fmt(G.funds[0]); $('inc').textContent = '+' + fmt(income(0));
+    const my = G.side === 0 && !busy && !G.over && !auto;
+    $('endBtn').disabled = !my; $('nextBtn').disabled = !my;
+    $('endBtn').classList.toggle('ready', my && !G.units.some(u => u.s === 0 && !u.done));
+    if (ui.mode === 'idle' && ui.tile < 0) idleHint();
+  }
+  function clearSel() { Object.assign(ui, { mode: 'idle', sel: null, R: null, stops: null, atk: null, tg: null, tgt: null, threat: null, tile: -1 }); setActs([]); idleHint(); }
+  function select(u) {
+    clearSel();
+    Object.assign(ui, { mode: 'sel', sel: u, orig: u.i, origFuel: u.fuel, R: reach(u) });
+    ui.stops = new Set([...ui.R.keys()].filter(i => canStop(u, i)));
+    ui.atk = attackSet(u, ui.stops);
+    info(unitCard(u)); setActs([{ label: 'その場で行動', fn: () => enterAct(u) }, { label: '選択解除', fn: clearSel }]); beep(660, 0.05);
+  }
+  function enterAct(u) {
+    Object.assign(ui, { mode: 'act', R: null, stops: null, atk: null, tgt: null });
+    ui.tg = !isInd(u) || u.i === ui.orig ? targetsFrom(u, u.i) : [];
+    const acts = [];
+    if (ui.tg.length) acts.push({ label: '攻撃', cls: 'warn', fn: () => ui.tg.length === 1 ? openFc(ui.tg[0]) : toast('攻撃する敵（赤いマス）をタップ') });
+    if (canCap(u)) acts.push({ label: '占領', cls: 'main', fn: () => playerCap(u) });
+    acts.push({ label: '待機', fn: () => finish(u) }, { label: '戻る', fn: undo });
+    setActs(acts); info(unitCard(u));
+  }
+  function openFc(e) {
+    const u = ui.sel; ui.mode = 'fc'; ui.tgt = e;
+    info(fcCard(u, e)); setActs([{ label: '攻撃する', cls: 'warn', fn: () => playerAttack(u, e) }, { label: '戻る', fn: () => enterAct(u) }]);
+  }
+  function commitOrig(u) { if (ui.orig !== u.i && ui.orig >= 0) { const T = G.tiles[ui.orig]; if (T.cp < 20) T.cp = 20; } }
+  function undo() { const u = ui.sel; if (!u) return; if (u.i !== ui.orig) { occ.delete(u.i); u.i = ui.orig; occ.set(u.i, u); u.fuel = ui.origFuel; } select(u); }
+  function afterAction() { if (G.over) return; clearSel(); save(); refresh(); }
+  function finish(u) { commitOrig(u); u.done = true; beep(440, 0.05, 'triangle'); afterAction(); }
+  function playerCap(u) { commitOrig(u); capture(u); u.done = true; afterAction(); }
+  async function playerAttack(u, e) {
+    busy = true; setActs([]); commitOrig(u);
+    await combat(u, e, 90);
+    busy = false; if (G.over) return;
+    if (G.units.includes(u)) u.done = true;
+    afterAction();
+  }
+  async function playerMove(u, i) { busy = true; setActs([]); await moveUnit(u, pathTo(ui.R, i), 55); busy = false; }
+  function bestFrom(u, froms) {
+    const sc = f => (f === u.i ? 1000 : 0) + defStars(u, f) * 10 - ui.R.get(f).c;
+    return froms.slice().sort((a, b) => sc(b) - sc(a))[0];
+  }
+  function onTap(i) {
+    if (busy || !G || G.over || G.side !== 0 || auto) return;
+    const u = i >= 0 ? unitAt(i) : null;
+    if (ui.mode === 'sel') {
+      const s = ui.sel;
+      if (i === s.i) { enterAct(s); return; }
+      if (ui.stops.has(i)) { playerMove(s, i).then(() => enterAct(s)); return; }
+      if (u && ui.atk.has(i)) { playerMove(s, bestFrom(s, ui.atk.get(i))).then(() => { enterAct(s); openFc(u); }); return; }
+      if (u && u.s === 0 && !u.done) { select(u); return; }
+      clearSel(); return;
+    }
+    if (ui.mode === 'act' || ui.mode === 'fc') {
+      if (u && ui.tg.includes(u)) { openFc(u); return; }
+      if (ui.mode === 'fc') { enterAct(ui.sel); return; }
+      undo(); return;
+    }
+    if (i < 0) { clearSel(); return; }
+    if (u && u.s === 0 && !u.done) { select(u); return; }
+    clearSel(); ui.tile = i;
+    if (u) { if (u.s !== 0) ui.threat = threatTiles(u); info(unitCard(u)); if (u.s !== 0) toast('オレンジ＝この敵が次に攻撃できる範囲'); return; }
+    if (canBuildAt(i, 0)) { openBuild(i); return; }
+    info(tileCard(i));
+  }
+  function openBuild(i) {
+    const kind = TER[G.tiles[i].t].build;
+    $('buildTitle').textContent = TER[G.tiles[i].t].name + 'で生産';
+    $('buildFunds').textContent = `資金 ${fmt(G.funds[0])}　（生産した部隊は次のターンから行動）`;
+    $('buildList').replaceChildren(...BUILD[kind].map(t => {
+      const d = UT[t], b = el('button', 'bu'), nm = el('span', 'nm'); b.type = 'button'; b.disabled = d.cost > G.funds[0];
+      nm.append(el('span', null, d.name), el('span', 'c', fmt(d.cost)));
+      b.append(iconCv(t, 0, 44), nm, el('span', 'd', d.desc));
+      b.onclick = () => { build(t, i, 0); $('pBuild').hidden = true; beep(780, 0.08, 'triangle'); toast(`${d.name}を生産した`); ui.tile = -1; afterAction(); };
+      return b;
+    }));
+    $('pBuild').hidden = false;
+  }
+
+  // ---------- input ----------
+  const ptrs = new Map(); let gest = null;
+  cv.addEventListener('pointerdown', e => {
+    try { cv.setPointerCapture(e.pointerId); } catch {}
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 1) gest = { tap: true, sx: e.clientX, sy: e.clientY, t: performance.now(), cx: cam.x, cy: cam.y };
+    else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; gest = { tap: false, pinch: true, d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: cam.z }; }
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId) || !gest || !G) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (gest.pinch && ptrs.size >= 2) { const [a, b] = [...ptrs.values()]; zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, gest.z0 * Math.hypot(a.x - b.x, a.y - b.y) / gest.d0); gest.z0 = cam.z; gest.d0 = Math.hypot(a.x - b.x, a.y - b.y) || 1; return; }
+    const dx = e.clientX - gest.sx, dy = e.clientY - gest.sy;
+    if (gest.tap && Math.hypot(dx, dy) > 9) gest.tap = false;
+    if (!gest.tap) { cam.x = gest.cx - dx / cam.z; cam.y = gest.cy - dy / cam.z; clampCam(); }
+  });
+  const ptrEnd = e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.delete(e.pointerId);
+    if (gest && gest.tap && !ptrs.size && e.type === 'pointerup' && performance.now() - gest.t < 600 && G) onTap(pick(e.clientX / cam.z + cam.x, e.clientY / cam.z + cam.y));
+    if (ptrs.size === 1) { const [p] = [...ptrs.values()]; gest = { tap: false, sx: p.x, sy: p.y, cx: cam.x, cy: cam.y }; } else if (!ptrs.size) gest = null;
+  };
+  cv.addEventListener('pointerup', ptrEnd); cv.addEventListener('pointercancel', ptrEnd);
+  cv.addEventListener('wheel', e => { e.preventDefault(); if (G) zoomAt(e.clientX, e.clientY, cam.z * Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+  addEventListener('resize', resize);
+
+  // ---------- screens ----------
+  const panels = ['pTitle', 'pBuild', 'pMenu', 'pHelp', 'pEnd'];
+  const show = id => panels.forEach(p => { $(p).hidden = p !== id; });
+  let helpFrom = 'pTitle';
+  function renderTitle() {
+    const sv = load(LSK); $('resumeBtn').hidden = !(sv && sv.v === 1);
+    if (sv && sv.v === 1) { const sc = SCEN.find(s => s.id === sv.sc); $('resumeBtn').textContent = `つづきから（${sc ? sc.name : ''} ターン${sv.turn}）`; }
+    $('scenList').replaceChildren(...SCEN.map(sc => {
+      const b = el('button', 'sc'); b.type = 'button';
+      b.append(el('b', null, sc.name), el('span', 's', sc.sub), el('span', 'm', `${sc.W}×${sc.H} · 敵収入 ×${sc.ai}${sc.air ? ' · 航空機あり' : ''}`));
+      const p = prog[sc.id]; if (p) b.append(el('span', 'ok', `CLEAR\nT${p.best}`));
+      b.onclick = () => startGame(sc.id);
+      return b;
+    }));
+    show('pTitle');
+  }
+  function enterMap() {
+    show(null); resize(); fitCam();
+    const hq = G.tiles.findIndex(t => t.t === 'hq' && t.o === 0);
+    if (hq >= 0) centerOn(hq);
+  }
+  function startGame(id) {
+    if (G) G.halt = true;
+    store(LSK, null); newGame(id); enterMap(); busy = false; clearSel(); startTurn(); refresh();
+  }
+  function resumeGame() {
+    if (G) G.halt = true;
+    if (!restore(load(LSK))) { store(LSK, null); renderTitle(); return; }
+    enterMap(); clearSel(); banner(`TURN ${G.turn}　${SIDE[G.side].name}`, SIDE[G.side].col);
+    if (G.side === 1) aiTurn(); else { busy = false; refresh(); }
+  }
+  function endGame(w, why) {
+    G.over = 1; busy = false; store(LSK, null);
+    Object.assign(ui, { mode: 'idle', sel: null, stops: null, atk: null, tg: null, tgt: null, threat: null }); setActs([]);
+    if (auto) { (window.__kk.results = window.__kk.results || []).push({ sc: G.sc, w, why, turn: G.turn, units: [0, 1].map(s => G.units.filter(u => u.s === s).length) }); return; }
+    const win = w === 0;
+    if (win) { const p = prog[G.sc] || {}; p.best = Math.min(p.best || 999, G.turn); p.n = (p.n || 0) + 1; prog[G.sc] = p; store(LSP, prog); }
+    banner(win ? '勝利' : '敗北', win ? '#f2c14e' : '#ff5b4f'); hint(win ? '作戦成功！' : '作戦失敗…'); refresh();
+    setTimeout(() => {
+      $('endEye').textContent = win ? 'VICTORY' : 'DEFEAT'; $('endEye').style.color = win ? 'var(--gold)' : 'var(--red)';
+      $('endTitle').textContent = win ? (why === 'hq' ? '敵司令部を占領した' : '敵部隊を殲滅した') : (why === 'hq' ? '司令部が陥落した' : '自軍が全滅した');
+      $('endStats').replaceChildren(...[[G.turn, 'ターン'], [G.stats.kills[0], '撃破'], [G.stats.lost[0], '損失'], [G.stats.caps[0], '占領']].map(([v, l]) => { const d = el('div'); d.append(el('b', null, fmt(v)), el('span', null, l)); return d; }));
+      show('pEnd');
+    }, 1300);
+  }
+  $('resumeBtn').onclick = resumeGame;
+  $('helpBtn').onclick = () => { helpFrom = 'pTitle'; show('pHelp'); };
+  $('helpBack').onclick = () => show(helpFrom);
+  $('buildClose').onclick = () => { show(null); };
+  $('menuBtn').onclick = () => { if (G && !G.over) show('pMenu'); };
+  $('mResume').onclick = () => show(null);
+  const optLabels = () => { $('mSpeed').textContent = `敵の速度：${SPEEDS[opt.speed][0]}`; $('mSound').textContent = `効果音：${opt.sound ? 'ON' : 'OFF'}`; };
+  $('mSpeed').onclick = () => { opt.speed = (opt.speed + 1) % SPEEDS.length; store(LSO, opt); optLabels(); };
+  $('mSound').onclick = () => { opt.sound = opt.sound ? 0 : 1; store(LSO, opt); optLabels(); };
+  $('mHelp').onclick = () => { helpFrom = 'pMenu'; show('pHelp'); };
+  $('mTitle').onclick = () => { save(); if (G) G.halt = true; busy = false; renderTitle(); };
+  $('endAgain').onclick = () => startGame(G.sc);
+  $('endTitleBtn').onclick = () => renderTitle();
+  $('endBtn').onclick = () => {
+    if (busy || !G || G.side !== 0 || G.over) return;
+    if (ui.sel && (ui.mode === 'act' || ui.mode === 'fc')) undo();
+    clearSel(); endTurn();
+  };
+  $('nextBtn').onclick = () => {
+    if (busy || !G || G.side !== 0 || G.over) return;
+    if (ui.sel && (ui.mode === 'act' || ui.mode === 'fc')) return toast('先に行動を決めてください');
+    const list = G.units.filter(u => u.s === 0 && !u.done); if (!list.length) return toast('未行動の部隊はありません');
+    const k = ui.sel ? (list.indexOf(ui.sel) + 1) % list.length : 0;
+    select(list[k]); centerOn(list[k].i);
+  };
+  addEventListener('pagehide', save);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
+  window.__kk = {
+    get G() { return G; }, ui, SCEN,
+    autoplay(id) { auto = true; if (G) G.halt = true; newGame(id); enterMap(); clearSel(); startTurn(); },
+    stop() { auto = false; if (G) G.halt = true; }
+  };
+
+  optLabels(); resize(); renderTitle(); requestAnimationFrame(frame);
+})();
+</script>
