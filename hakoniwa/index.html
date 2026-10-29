@@ -1,0 +1,990 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>ハコニワ市長</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&family=Outfit:wght@600;800&display=swap">
+<style>
+  /* layout: full-bleed isometric city, status HUD pinned top, tool palette pinned bottom */
+  :root {
+    color-scheme: light;
+    --bg: #bfe3f2; --panel: rgba(255, 255, 255, 0.92); --solid: #ffffff; --line: #d5e2e8; --ink: #22323a; --dim: #66808c;
+    --accent: #ff8a3d; --R: #4fb246; --C: #3f88d6; --I: #d9a520; --bad: #e0503f; --good: #3aa65a;
+    --body: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+    --num: "Outfit", "M PLUS Rounded 1c", system-ui, sans-serif;
+  }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); overflow: hidden; overscroll-behavior: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #hud { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; flex-direction: column; gap: 6px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) 6px max(10px, env(safe-area-inset-left, 0px)); pointer-events: none; }
+  #hud > * { pointer-events: auto; }
+  .hr { display: flex; gap: 6px; align-items: center; }
+  .chip { display: flex; align-items: baseline; gap: 5px; padding: 6px 10px; border-radius: 12px; background: var(--panel); box-shadow: 0 2px 8px rgba(30, 60, 80, 0.12); font-size: 11.5px; color: var(--dim); white-space: nowrap; min-width: 0; }
+  .chip b { font-family: var(--num); font-weight: 800; font-size: 16px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .chip .st { font-weight: 800; font-size: 11px; color: #fff; background: var(--accent); padding: 1px 7px; border-radius: 8px; align-self: center; }
+  .chip.city b { font-family: var(--body); font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+  .chip.grow { flex: 1; }
+  #net { font-family: var(--num); font-weight: 600; font-size: 11px; }
+  .pos { color: var(--good); } .neg { color: var(--bad) !important; }
+  .speed { display: flex; background: var(--panel); border-radius: 12px; box-shadow: 0 2px 8px rgba(30, 60, 80, 0.12); overflow: hidden; }
+  .speed button { border: 0; background: none; width: 34px; height: 32px; font-family: var(--num); font-weight: 800; font-size: 11px; letter-spacing: -0.12em; color: var(--dim); }
+  .speed button.on { background: var(--ink); color: #fff; }
+  .rci { display: flex; gap: 4px; align-items: center; padding: 3px 8px; background: var(--panel); border-radius: 12px; box-shadow: 0 2px 8px rgba(30, 60, 80, 0.12); height: 32px; box-sizing: border-box; }
+  .rb { display: flex; flex-direction: column; align-items: center; gap: 1px; font-family: var(--num); font-weight: 800; font-size: 8.5px; color: var(--dim); }
+  .rb span { position: relative; width: 8px; height: 18px; background: #e8eff2; border-radius: 3px; overflow: hidden; }
+  .rb i { position: absolute; left: 0; right: 0; border-radius: 2px; }
+  .ib { width: 36px; height: 32px; border: 0; border-radius: 12px; background: var(--panel); box-shadow: 0 2px 8px rgba(30, 60, 80, 0.12); font-weight: 800; font-size: 16px; }
+  #mission { align-self: flex-start; max-width: 100%; box-sizing: border-box; padding: 6px 11px; border-radius: 12px; background: rgba(34, 50, 58, 0.86); color: #fff; font-size: 12px; line-height: 1.45; }
+  #mission b { color: #ffd27a; }
+  #bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; gap: 8px; padding: 0 max(10px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); pointer-events: none; }
+  #bottom > * { pointer-events: auto; }
+  #card { align-self: stretch; padding: 10px 12px; border-radius: 16px; background: var(--panel); box-shadow: 0 4px 16px rgba(30, 60, 80, 0.16); font-size: 12.5px; display: flex; flex-direction: column; gap: 6px; }
+  #card .t { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  #card .t b { font-size: 15px; }
+  #card .t button { border: 0; background: none; color: var(--dim); font-size: 18px; line-height: 1; padding: 0 2px; }
+  .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+  .mt { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--dim); }
+  .mt span { flex: none; width: 34px; }
+  .mt i { flex: 1; height: 6px; border-radius: 3px; background: #e8eff2; overflow: hidden; position: relative; }
+  .mt i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--c); border-radius: 3px; }
+  .why { color: var(--bad); font-weight: 800; font-size: 12px; }
+  .ok { color: var(--good); font-weight: 800; font-size: 12px; }
+  .tbar { display: flex; gap: 8px; align-items: stretch; }
+  #ovBtn { flex: none; width: 54px; border: 0; border-radius: 16px; background: var(--ink); color: #fff; font-weight: 800; font-size: 11px; line-height: 1.3; box-shadow: 0 4px 14px rgba(30, 60, 80, 0.2); }
+  #tools { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; padding: 6px; border-radius: 18px; background: var(--panel); box-shadow: 0 4px 16px rgba(30, 60, 80, 0.16); scrollbar-width: none; scroll-snap-type: x proximity; }
+  #tools::-webkit-scrollbar { display: none; }
+  .tl { flex: none; width: 62px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 2px 5px; border: 2px solid transparent; border-radius: 13px; background: none; scroll-snap-align: start; }
+  .tl canvas { width: 44px; height: 34px; }
+  .tl .n { font-size: 10.5px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
+  .tl .c { font-family: var(--num); font-size: 10px; font-weight: 600; color: var(--dim); }
+  .tl.on { border-color: var(--accent); background: #fff3ea; }
+  .tl.lock { opacity: 0.38; }
+  #tag { position: fixed; z-index: 6; padding: 4px 9px; border-radius: 9px; background: rgba(34, 50, 58, 0.9); color: #fff; font-family: var(--num); font-weight: 800; font-size: 13px; pointer-events: none; transform: translate(-50%, -150%); display: none; white-space: nowrap; }
+  #tag.bad { background: var(--bad); }
+  #toast { position: fixed; left: 50%; top: 40%; z-index: 7; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 14px; background: rgba(34, 50, 58, 0.92); color: #fff; font-size: 13.5px; font-weight: 800; text-align: center; line-height: 1.5; white-space: pre-line; pointer-events: none; opacity: 0; transition: opacity 0.25s; }
+  #toast.on { opacity: 1; }
+  #legend { position: fixed; z-index: 5; left: 50%; transform: translateX(-50%); padding: 5px 12px; border-radius: 10px; background: rgba(34, 50, 58, 0.88); color: #fff; font-size: 12px; font-weight: 800; pointer-events: none; display: none; }
+  .panel { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px)); background: rgba(40, 70, 85, 0.45); backdrop-filter: blur(4px); overflow-y: auto; }
+  .box { width: min(100%, 420px); display: flex; flex-direction: column; gap: 14px; padding: 22px 18px; border-radius: 24px; background: var(--solid); box-shadow: 0 16px 48px rgba(20, 50, 70, 0.3); box-sizing: border-box; margin-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px); }
+  .eyebrow { font-family: var(--num); font-size: 11px; font-weight: 800; letter-spacing: 0.22em; color: var(--accent); text-align: center; }
+  h1 { margin: 0; font-weight: 800; font-size: clamp(38px, 12vw, 52px); line-height: 1.1; text-align: center; letter-spacing: 0.02em; }
+  h1 span { color: var(--accent); }
+  h2 { margin: 0; font-size: 21px; font-weight: 800; text-align: center; }
+  .lead { margin: 0; color: var(--dim); font-size: 13.5px; line-height: 1.75; text-align: center; text-wrap: pretty; }
+  .btn { padding: 13px 16px; border-radius: 16px; border: 2px solid var(--line); background: #fff; font-weight: 800; font-size: 15px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .lands { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .land { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 16px; border: 2px solid var(--line); background: #fff; font-weight: 800; font-size: 12.5px; }
+  .land canvas { width: 72px; height: 48px; }
+  .land.on { border-color: var(--accent); background: #fff3ea; }
+  .tax { display: flex; flex-direction: column; gap: 6px; }
+  .tax .t { display: flex; justify-content: space-between; font-weight: 800; font-size: 14px; }
+  .tax .t b { font-family: var(--num); font-size: 18px; color: var(--accent); }
+  .tax input { width: 100%; accent-color: var(--accent); }
+  .tax small { color: var(--dim); font-size: 11.5px; line-height: 1.5; }
+  .bud { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding: 12px 14px; border-radius: 14px; background: #f3f8fa; font-size: 13px; }
+  .bud b { font-family: var(--num); font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+  .bud .sum { border-top: 1px solid var(--line); padding-top: 5px; font-weight: 800; }
+  .help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; line-height: 1.65; }
+  .help b { color: var(--accent); }
+  .goals { display: flex; flex-direction: column; gap: 6px; }
+  .goal { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: 12px; background: #f3f8fa; font-size: 13px; font-weight: 800; }
+  .goal span { font-family: var(--num); color: var(--dim); font-weight: 600; }
+  .goal.done { background: #e6f6ea; color: var(--good); }
+</style>
+
+<canvas id="cv"></canvas>
+
+<header id="hud">
+  <div class="hr">
+    <div class="chip city grow"><span class="st" id="stage">村</span><b id="cname">ハコニワ村</b></div>
+    <div class="chip"><span>人口</span><b id="pop">0</b></div>
+    <div class="chip"><span>資金</span><b id="funds">0</b><span id="net"></span></div>
+  </div>
+  <div class="hr">
+    <div class="chip" id="dateChip"><b id="date" style="font-size:13px">1年 1月</b></div>
+    <div class="speed" id="speed">
+      <button type="button" data-s="0" aria-label="一時停止">II</button>
+      <button type="button" data-s="1" aria-label="標準速度">▶</button>
+      <button type="button" data-s="2" aria-label="2倍速">▶▶</button>
+      <button type="button" data-s="3" aria-label="4倍速">▶▶▶</button>
+    </div>
+    <div class="rci" aria-label="需要">
+      <div class="rb"><span><i id="dR"></i></span>R</div>
+      <div class="rb"><span><i id="dC"></i></span>C</div>
+      <div class="rb"><span><i id="dI"></i></span>I</div>
+    </div>
+    <span style="flex:1"></span>
+    <button type="button" class="ib" id="menuBtn" aria-label="メニュー">≡</button>
+  </div>
+  <div id="mission"></div>
+</header>
+
+<div id="bottom">
+  <div id="card" hidden></div>
+  <div class="tbar">
+    <button type="button" id="ovBtn">表示<br>通常</button>
+    <div id="tools"></div>
+  </div>
+</div>
+
+<div id="legend"></div>
+<div id="tag"></div>
+<div id="toast"></div>
+
+<section class="panel" id="pTitle">
+  <div class="box">
+    <div class="eyebrow">CITY BUILDER</div>
+    <h1>ハコニワ<span>市長</span></h1>
+    <p class="lead">道路を引いて、住宅・商業・工業の区画を指定しよう。電気と公共サービスを整えれば、村は町に、町は大都市に育っていく。</p>
+    <button type="button" class="btn primary" id="resumeBtn" hidden>つづきから</button>
+    <div class="lands" id="lands"></div>
+    <button type="button" class="btn" id="newBtn">この土地で新しい街をつくる</button>
+    <button type="button" class="btn" id="helpBtn">遊び方</button>
+  </div>
+</section>
+
+<section class="panel" id="pMenu" hidden>
+  <div class="box">
+    <h2>市長室</h2>
+    <div class="tax">
+      <div class="t"><span>税率</span><b id="taxV">9%</b></div>
+      <input type="range" id="tax" min="0" max="20" step="1" value="9" aria-label="税率">
+      <small>税を上げると収入は増えるが、住民や企業が集まりにくくなる。</small>
+    </div>
+    <div class="bud" id="bud"></div>
+    <div class="goals" id="goals"></div>
+    <div class="row">
+      <button type="button" class="btn" id="fireBtn">火災：ON</button>
+      <button type="button" class="btn" id="mHelp">遊び方</button>
+    </div>
+    <button type="button" class="btn primary" id="mClose">街に戻る</button>
+    <button type="button" class="btn" id="mTitle">タイトルへ（自動保存）</button>
+  </div>
+</section>
+
+<section class="panel" id="pHelp" hidden>
+  <div class="box">
+    <h2>遊び方</h2>
+    <ul class="help">
+      <li>下のツールを選んでマップをなぞる。<b>道路・電線</b>は線、<b>区画・解体</b>は四角く範囲を指定できる。地図の移動は2本指か「調べる」ツールで。</li>
+      <li>まず<b>発電所</b>を建てる。電気は道路・電線・建物を伝わって広がる。</li>
+      <li><b>住宅(R)・商業(C)・工業(I)</b>を道路から2マス以内に指定すると、需要に応じて建物が育つ。上のRCIバーが需要。</li>
+      <li>工業は汚染を出す。住宅とは離し、<b>公園</b>や木で和らげよう。</li>
+      <li><b>警察</b>は犯罪を、<b>消防</b>は火災を減らす。<b>学校</b>や<b>病院</b>で地価が上がり、高層ビルが建つ。</li>
+      <li>毎月、税収から維持費が引かれる。赤字が続かないよう税率と施設のバランスを取ろう。</li>
+      <li>人口が増えると村→町→市→大都市→メガシティに昇格し、新しい施設とボーナス資金がもらえる。</li>
+      <li>「表示」ボタンで地価・汚染・犯罪・電力のマップを切り替えられる。</li>
+    </ul>
+    <button type="button" class="btn" id="helpBack">戻る</button>
+  </div>
+</section>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+  const store = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const fmt = n => Math.round(n).toLocaleString('ja-JP');
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const LSK = 'hk.save';
+
+  // ---------- data ----------
+  const N = 40, NN = N * N, HW = 32, HH = 16;
+  const GRASS = 0, WATER = 1, TREE = 2, ROAD = 3, LINE = 4, ZR = 5, ZC = 6, ZI = 7, BLD = 8, RUBBLE = 9;
+  const isZone = t => t >= ZR && t <= ZI;
+  const POP = [0, 12, 50, 180], JOBC = [0, 8, 32, 110], JOBI = [0, 10, 36, 100], USE = [1, 2, 4, 7];
+  const BK = [
+    { id: 'coal', name: '火力発電所', cost: 3000, up: 60, size: 2, power: 700, unlock: 0, desc: '安い電力。汚染が多い' },
+    { id: 'solar', name: '太陽光発電', cost: 6000, up: 45, size: 2, power: 450, unlock: 1, desc: '汚染ゼロの発電所' },
+    { id: 'nuke', name: '原子力発電所', cost: 18000, up: 160, size: 2, power: 3200, unlock: 3, desc: '大電力。汚染ゼロ' },
+    { id: 'police', name: '警察署', cost: 600, up: 30, size: 1, rad: 9, unlock: 0, desc: '周囲の犯罪を減らす' },
+    { id: 'fire', name: '消防署', cost: 600, up: 30, size: 1, rad: 9, unlock: 0, desc: '火災を防ぎ、消し止める' },
+    { id: 'park', name: '公園', cost: 120, up: 2, size: 1, rad: 4, unlock: 0, desc: '地価を上げ、汚染を和らげる' },
+    { id: 'school', name: '学校', cost: 1000, up: 40, size: 1, rad: 11, unlock: 1, desc: '教育で高層化が進む' },
+    { id: 'hosp', name: '病院', cost: 1300, up: 50, size: 1, rad: 11, unlock: 1, desc: '健康で地価が上がる' },
+    { id: 'stadium', name: 'スタジアム', cost: 9000, up: 80, size: 2, rad: 15, unlock: 2, desc: '地価と商業需要アップ' },
+    { id: 'airport', name: '空港', cost: 22000, up: 180, size: 2, unlock: 3, desc: '商業・工業の需要が大きく増える' },
+    { id: 'tower', name: 'シティタワー', cost: 35000, up: 60, size: 1, rad: 16, unlock: 4, desc: '街のシンボル。広い範囲の地価アップ' }
+  ];
+  const bkIdx = id => BK.findIndex(b => b.id === id);
+  const STAGES = [{ n: '村', p: 0 }, { n: '町', p: 800, bonus: 3000 }, { n: '市', p: 4000, bonus: 6000 }, { n: '大都市', p: 15000, bonus: 12000 }, { n: 'メガシティ', p: 40000, bonus: 25000 }];
+  const TOOLS = [
+    { id: 'look', name: '調べる', cost: 0 },
+    { id: 'road', name: '道路', cost: 10, drag: 'line' },
+    { id: 'R', name: '住宅地', cost: 10, drag: 'rect', zone: ZR },
+    { id: 'C', name: '商業地', cost: 10, drag: 'rect', zone: ZC },
+    { id: 'I', name: '工業地', cost: 10, drag: 'rect', zone: ZI },
+    { id: 'doze', name: '解体', cost: 1, drag: 'rect' },
+    { id: 'line', name: '電線', cost: 5, drag: 'line' },
+    ...BK.map((b, k) => ({ id: 'b' + k, name: b.name, cost: b.cost, bk: k }))
+  ];
+  const LANDS = [{ id: 'river', name: '川の平野' }, { id: 'bay', name: '湾岸' }, { id: 'lake', name: '湖と森' }];
+
+  // ---------- map ----------
+  let S = null, M = null;
+  function blankMap() {
+    const f = () => new Float32Array(NN);
+    return { base: new Uint8Array(NN), type: new Uint8Array(NN), lv: new Uint8Array(NN), bk: new Uint8Array(NN), root: new Int32Array(NN).fill(-1), vr: new Uint8Array(NN), fire: new Uint8Array(NN), pw: new Uint8Array(NN), road: new Uint8Array(NN), age: new Uint8Array(NN), lval: f(), poll: f(), crime: f(), pol: f(), fcv: f(), edu: f(), hea: f(), prk: f(), wat: f() };
+  }
+  function genMap(seed, kind) {
+    M = blankMap();
+    const R = mulberry(seed * 7 + 3);
+    for (let i = 0; i < NN; i++) M.vr[i] = (R() * 256) | 0;
+    // value noise for forests
+    const G = 6, g = Array.from({ length: (G + 1) * (G + 1) }, R);
+    const noise = (x, y) => { const fx = x / N * G, fy = y / N * G, ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy, s = t => t * t * (3 - 2 * t), at = (a, b) => g[Math.min(G, b) * (G + 1) + Math.min(G, a)]; const a = at(ix, iy) + (at(ix + 1, iy) - at(ix, iy)) * s(tx), b = at(ix, iy + 1) + (at(ix + 1, iy + 1) - at(ix, iy + 1)) * s(tx); return a + (b - a) * s(ty); };
+    const W = (x, y) => { if (x >= 0 && y >= 0 && x < N && y < N) M.base[y * N + x] = WATER; };
+    if (kind === 'river') {
+      let cx = 8 + R() * 8, dx = 0;
+      for (let y = 0; y < N; y++) { dx = clamp(dx + (R() - 0.5) * 0.7, -0.8, 0.8); cx = clamp(cx + dx, 4, 18); const w = 1.3 + R() * 0.9; for (let x = Math.floor(cx - w); x <= Math.ceil(cx + w); x++) W(x, y); }
+    } else if (kind === 'bay') {
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const d = (x + y) - (16 + noise(x * 1.3, y * 1.3) * 10); if (d < 0) W(x, y); }
+      for (let k = 0; k < 2; k++) { const px = 14 + R() * 6, py = 2 + R() * 4; for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (Math.hypot(x - px, y - py) < 2.2 + R() * 0.6) W(x, y); }
+    } else {
+      for (const [px, py, r] of [[10 + R() * 4, 9 + R() * 4, 4 + R() * 1.5], [26 + R() * 5, 27 + R() * 5, 3 + R() * 1.5]]) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (Math.hypot(x - px, y - py) < r + (noise(x * 2, y * 2) - 0.5) * 2.4) W(x, y);
+    }
+    const tr = kind === 'lake' ? 0.5 : 0.6;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const i = y * N + x; if (M.base[i] === WATER) { M.type[i] = WATER; continue; }
+      const cd = Math.hypot(x - N * 0.58, y - N * 0.58) / N;
+      M.type[i] = noise(x, y) + R() * 0.25 - (cd < 0.22 ? 0.25 : 0) > tr ? TREE : GRASS;
+    }
+    for (let i = 0; i < NN; i++) { const x = i % N, y = (i / N) | 0; let w = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < N && yy < N && M.base[yy * N + xx] === WATER) w = 1; } M.wat[i] = w; }
+  }
+  const nb4 = i => { const x = i % N, y = (i / N) | 0, r = []; if (x > 0) r.push(i - 1); if (x < N - 1) r.push(i + 1); if (y > 0) r.push(i - N); if (y < N - 1) r.push(i + N); return r; };
+  const NB4 = Array.from({ length: NN }, (_, i) => nb4(i));
+
+  // ---------- simulation ----------
+  function rootOf(i) { return M.root[i] >= 0 ? M.root[i] : i; }
+  function buildings() { const out = []; for (let i = 0; i < NN; i++) if (M.type[i] === BLD && M.root[i] === i) out.push(i); return out; }
+  function calcPower() {
+    M.pw.fill(0);
+    let cap = 0, short = false; const q = [];
+    for (const r of buildings()) { const b = BK[M.bk[r]]; if (b.power && !M.fire[r]) { cap += b.power; for (let dy = 0; dy < b.size; dy++) for (let dx = 0; dx < b.size; dx++) { const j = r + dy * N + dx; M.pw[j] = 1; q.push(j); } } }
+    S.cap = cap; let used = 0;
+    for (let h = 0; h < q.length; h++) {
+      for (const n of NB4[q[h]]) {
+        if (M.pw[n]) continue; const t = M.type[n];
+        if (t === ROAD || t === LINE) { M.pw[n] = 1; q.push(n); }
+        else if (isZone(t) || t === BLD) {
+          const use = t === BLD ? 3 : USE[M.lv[n]];
+          if (used + use > cap) { short = true; continue; }
+          used += use; M.pw[n] = 1; q.push(n);
+        }
+      }
+    }
+    // multi-tile buildings share power across their footprint
+    for (const r of buildings()) { const s = BK[M.bk[r]].size; if (s > 1) { let p = 0; for (let dy = 0; dy < s; dy++) for (let dx = 0; dx < s; dx++) p |= M.pw[r + dy * N + dx]; for (let dy = 0; dy < s; dy++) for (let dx = 0; dx < s; dx++) M.pw[r + dy * N + dx] = p; } }
+    S.used = used; S.short = short;
+  }
+  function calcRoad() {
+    M.road.fill(0);
+    for (let i = 0; i < NN; i++) if (M.type[i] === ROAD) { const x = i % N, y = (i / N) | 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < N && yy < N) M.road[yy * N + xx] = 1; } }
+  }
+  function cover(arr, r, rad, strength = 1) {
+    const s = BK[M.bk[r]].size, cx = r % N + s / 2, cy = ((r / N) | 0) + s / 2;
+    for (let y = Math.max(0, Math.floor(cy - rad)); y < Math.min(N, Math.ceil(cy + rad)); y++) for (let x = Math.max(0, Math.floor(cx - rad)); x < Math.min(N, Math.ceil(cx + rad)); x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), v = (1 - d / rad) * strength; const i = y * N + x; if (v > arr[i]) arr[i] = v;
+    }
+  }
+  function blur(src, it, keep) {
+    let a = Float32Array.from(src), b = new Float32Array(NN);
+    for (let k = 0; k < it; k++) {
+      for (let i = 0; i < NN; i++) { const x = i % N, y = (i / N) | 0; let s = 0, c = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < N && yy < N) { s += a[yy * N + xx]; c++; } } b[i] = Math.max(src[i] * keep, s / c); }
+      [a, b] = [b, a];
+    }
+    return a;
+  }
+  function calcFields() {
+    for (const k of ['pol', 'fcv', 'edu', 'hea', 'prk']) M[k].fill(0);
+    let air = 0, stad = 0;
+    for (const r of buildings()) {
+      const b = BK[M.bk[r]], on = M.pw[r] || b.id === 'park';
+      if (!on || M.fire[r]) continue;
+      if (b.id === 'police') cover(M.pol, r, b.rad);
+      else if (b.id === 'fire') cover(M.fcv, r, b.rad);
+      else if (b.id === 'school') cover(M.edu, r, b.rad);
+      else if (b.id === 'hosp') cover(M.hea, r, b.rad);
+      else if (b.id === 'park') cover(M.prk, r, b.rad, 0.8);
+      else if (b.id === 'stadium') { cover(M.prk, r, b.rad, 0.7); stad++; }
+      else if (b.id === 'tower') cover(M.prk, r, b.rad, 1);
+      else if (b.id === 'airport') air++;
+    }
+    S.air = air; S.stad = stad;
+    const src = new Float32Array(NN);
+    for (let i = 0; i < NN; i++) {
+      const t = M.type[i];
+      if (t === ZI) src[i] = [0.05, 0.3, 0.5, 0.75][M.lv[i]];
+      else if (t === ROAD) src[i] = 0.04;
+      else if (t === ZC && M.lv[i] === 3) src[i] = 0.08;
+      else if (t === BLD) { const id = BK[M.bk[i]].id; src[i] = id === 'coal' ? 1.1 : id === 'airport' ? 0.6 : 0; }
+    }
+    const p = blur(src, 3, 0.85);
+    for (let i = 0; i < NN; i++) M.poll[i] = clamp(p[i] * 1.15 - M.prk[i] * 0.3 - (M.type[i] === TREE ? 0.12 : 0), 0, 1);
+    const den = new Float32Array(NN);
+    for (let i = 0; i < NN; i++) { const t = M.type[i]; den[i] = t === ZR ? M.lv[i] * 0.11 : t === ZC ? M.lv[i] * 0.13 : t === ZI ? M.lv[i] * 0.06 : 0; }
+    const d = blur(den, 2, 0.6);
+    for (let i = 0; i < NN; i++) M.crime[i] = clamp(d[i] * 1.6 + 0.06 + Math.max(0, 0.35 - M.lval[i]) * 0.35 - M.pol[i] * 0.95, 0, 1);
+    for (let i = 0; i < NN; i++) {
+      const t = M.type[i];
+      let v = 0.34 + M.wat[i] * 0.14 + M.prk[i] * 0.28 + M.pol[i] * 0.07 + M.fcv[i] * 0.05 + M.edu[i] * 0.16 + M.hea[i] * 0.11 - M.poll[i] * 0.62 - M.crime[i] * 0.3;
+      if (t === ZI) v -= 0.05; else if (t === ZC) v += 0.07;
+      M.lval[i] = clamp(v, 0, 1);
+    }
+  }
+  function totals() {
+    let pop = 0, cj = 0, ij = 0, roads = 0, lines = 0, unp = 0, zones = [0, 0, 0], noroad = 0;
+    for (let i = 0; i < NN; i++) {
+      const t = M.type[i], l = M.lv[i];
+      if (t === ZR) { pop += POP[l]; zones[0]++; } else if (t === ZC) { cj += JOBC[l]; zones[1]++; } else if (t === ZI) { ij += JOBI[l]; zones[2]++; }
+      else if (t === ROAD) roads++; else if (t === LINE) lines++;
+      if (isZone(t) && !M.pw[i]) unp++;
+      if (isZone(t) && !M.road[i]) noroad++;
+    }
+    Object.assign(S, { pop, cj, ij, roads, lines, unp, zones, noroad });
+  }
+  function calcDemand() {
+    const pop = S.pop, cj = S.cj, ij = S.ij, wf = pop * 0.55, tx = (S.tax - 9) * 0.06;
+    S.dem = {
+      R: clamp((cj + ij - wf + 60) / (wf * 0.3 + 80) - tx, -1, 1),
+      C: clamp((pop * 0.3 - cj + 20) / (cj * 0.4 + 60) + S.stad * 0.12 + S.air * 0.25 - tx, -1, 1),
+      I: clamp((pop * 0.33 + 120 - ij) / (ij * 0.4 + 80) + S.air * 0.25 - tx, -1, 1)
+    };
+  }
+  function maxLv(i) {
+    const t = M.type[i], lv = M.lval[i];
+    if (t === ZI) return S.stage >= 1 ? 3 : 2;
+    if (lv < 0.33) return 1;
+    if (lv < 0.5) return 2;
+    if (t === ZR) return S.stage >= 1 && M.edu[i] > 0.12 ? 3 : 2;
+    return S.stage >= 2 ? 3 : 2;
+  }
+  function whyNot(i) {
+    const t = M.type[i]; if (!isZone(t)) return null;
+    if (!M.pw[i]) return '電気が届いていない';
+    if (!M.road[i]) return '道路から遠い（2マス以内に道路を）';
+    if (M.fire[i]) return '火災が発生中！';
+    const d = S.dem[['R', 'C', 'I'][t - ZR]]; if (d < 0.02) return '需要が足りない';
+    if (t === ZR && M.poll[i] > 0.4) return '汚染がひどくて住みにくい';
+    if (M.crime[i] > 0.5) return '犯罪が多い（警察署を）';
+    if (M.lv[i] < maxLv(i) && score(i) <= 0.04) return '地価が低い（公園・学校・警察を近くに）';
+    if (M.lv[i] >= maxLv(i) && M.lv[i] < 3) return M.lval[i] < 0.5 ? (M.crime[i] > 0.25 ? '治安が悪く地価が低い（警察署を）' : M.poll[i] > 0.25 ? '汚染で地価が低い（工業から離す・公園）' : '地価が低い（公園・学校・病院を）') : t === ZR ? '学校が近くにない' : '街の規模が足りない';
+    return null;
+  }
+  function score(i) {
+    const t = M.type[i]; let s = S.dem[['R', 'C', 'I'][t - ZR]];
+    if (t === ZR) s += (M.lval[i] - 0.3) * 0.7 - M.poll[i] * 1.1 - M.crime[i] * 0.5 + M.edu[i] * 0.15 + M.hea[i] * 0.1;
+    else if (t === ZC) s += (M.lval[i] - 0.3) * 0.6 - M.crime[i] * 0.4 - M.poll[i] * 0.3;
+    else s += 0.08 - M.crime[i] * 0.3;
+    return s;
+  }
+  function grow() {
+    for (let i = 0; i < NN; i++) {
+      const t = M.type[i]; if (!isZone(t) || M.fire[i]) continue;
+      const l = M.lv[i];
+      if (!M.pw[i] || !M.road[i]) { if (l > 0 && Math.random() < 0.22) M.lv[i]--; continue; }
+      const s = score(i);
+      const mx = maxLv(i);
+      if (l > mx) { if (Math.random() < 0.15) M.lv[i]--; }
+      else if (s > 0.04 && l < mx && Math.random() < 0.12 + s * 0.45) M.lv[i]++;
+      else if (s < -0.25 && l > 0 && Math.random() < 0.14) M.lv[i]--;
+    }
+  }
+  function finance() {
+    const inc = Math.round((S.pop * 1.0 + (S.cj + S.ij) * 0.9) * S.tax / 100 * 3);
+    let svc = 0; for (const r of buildings()) svc += BK[M.bk[r]].up;
+    const rd = Math.round(S.roads * 0.35 + S.lines * 0.1);
+    S.last = { inc, svc, rd, net: inc - svc - rd };
+    S.funds += S.last.net;
+  }
+  function milestone() {
+    while (S.stage < STAGES.length - 1 && S.pop >= STAGES[S.stage + 1].p) {
+      S.stage++; const st = STAGES[S.stage]; S.funds += st.bonus;
+      const un = BK.filter(b => b.unlock === S.stage).map(b => b.name).join('・');
+      toast(`${st.n}に昇格！ ボーナス ${fmt(st.bonus)}${un ? `\n新施設：${un}` : ''}`, 3800); chime(); renderTools();
+    }
+  }
+  function fireWeek() {
+    for (let i = 0; i < NN; i++) if (M.fire[i]) {
+      if (M.fire[i] > 0 && Math.random() < M.fcv[i] * 0.55) { M.fire[i] = 0; continue; }
+      M.fire[i]--;
+      if (Math.random() < 0.16 * (1 - M.fcv[i])) for (const n of NB4[i]) if (!M.fire[n] && burnable(n) && Math.random() < 0.5) M.fire[n] = 5;
+      if (!M.fire[i]) burnOut(i);
+    }
+    if (!S.fires) return;
+    for (let i = 0; i < NN; i++) if (burnable(i) && M.type[i] !== TREE && !M.fire[i] && Math.random() < 0.00012 * (1 + (M.lv[i] || 2)) * (1 - M.fcv[i] * 0.9)) {
+      M.fire[i] = 5; toast('火災が発生！ 消防署の近くなら早く消える'); S.fireAt = i;
+    }
+  }
+  const burnable = i => (isZone(M.type[i]) && M.lv[i] > 0) || (M.type[i] === BLD && BK[M.bk[i]].id !== 'park') || M.type[i] === TREE;
+  function burnOut(i) {
+    const t = M.type[i];
+    if (isZone(t)) M.lv[i] = 0;
+    else if (t === TREE) M.type[i] = GRASS;
+    else if (t === BLD) { const r = rootOf(i), s = BK[M.bk[r]].size; for (let dy = 0; dy < s; dy++) for (let dx = 0; dx < s; dx++) { const j = r + dy * N + dx; M.type[j] = RUBBLE; M.root[j] = -1; M.fire[j] = 0; } }
+  }
+  function simMonth() {
+    calcPower(); calcRoad(); calcFields(); totals(); calcDemand(); grow(); calcPower(); totals(); finance(); milestone();
+    S.month++; dirtyCars = true; dirty = true; refreshHud(); if (S.month % 3 === 0) save();
+  }
+  function simWeek() { if (M.fire.some(v => v)) dirty = true; fireWeek(); S.week = (S.week + 1) % 4; if (S.week === 0) simMonth(); }
+
+  // ---------- editing ----------
+  function toolCanPlace(tool, i) {
+    const t = M.type[i];
+    if (tool.id === 'road') return t === GRASS || t === TREE || t === WATER || t === LINE || t === RUBBLE;
+    if (tool.id === 'line') return t === GRASS || t === TREE || t === RUBBLE;
+    if (tool.zone) return t === GRASS || t === TREE || t === RUBBLE || (isZone(t) && t !== tool.zone && M.lv[i] === 0);
+    if (tool.id === 'doze') return t !== GRASS && t !== WATER;
+    return false;
+  }
+  function toolCost(tool, i) {
+    const t = M.type[i];
+    if (tool.id === 'doze') return t === BLD ? 0 : t === TREE ? 3 : isZone(t) ? 2 + M.lv[i] * 8 : t === RUBBLE ? 5 : 2;
+    let c = tool.cost; if (tool.id === 'road' && t === WATER) c = 60; if (t === TREE) c += 3; if (t === RUBBLE) c += 5; return c;
+  }
+  function footprint(k, x, y) { const s = BK[k].size, out = []; for (let dy = 0; dy < s; dy++) for (let dx = 0; dx < s; dx++) { const xx = x + dx, yy = y + dy; if (xx >= N || yy >= N) return null; out.push(yy * N + xx); } return out; }
+  function bldCanPlace(k, x, y) { const f = footprint(k, x, y); return !!f && f.every(i => [GRASS, TREE, RUBBLE].includes(M.type[i])); }
+  function clearTile(i) {
+    const t = M.type[i];
+    if (t === BLD) { const r = rootOf(i), s = BK[M.bk[r]].size; for (let dy = 0; dy < s; dy++) for (let dx = 0; dx < s; dx++) { const j = r + dy * N + dx; M.type[j] = GRASS; M.root[j] = -1; M.fire[j] = 0; M.lv[j] = 0; } return; }
+    M.type[i] = M.base[i] === WATER ? WATER : GRASS; M.lv[i] = 0; M.fire[i] = 0;
+  }
+  // tiles touched by a drag, for line tools (L-shaped) and rect tools
+  function dragTiles(tool, a, b) {
+    const ax = a % N, ay = (a / N) | 0, bx = b % N, by = (b / N) | 0, out = [];
+    if (tool.drag === 'line') {
+      const hFirst = Math.abs(bx - ax) >= Math.abs(by - ay);
+      const sx = Math.sign(bx - ax), sy = Math.sign(by - ay); let x = ax, y = ay; out.push(y * N + x);
+      if (hFirst) { while (x !== bx) { x += sx; out.push(y * N + x); } while (y !== by) { y += sy; out.push(y * N + x); } }
+      else { while (y !== by) { y += sy; out.push(y * N + x); } while (x !== bx) { x += sx; out.push(y * N + x); } }
+    } else for (let y = Math.min(ay, by); y <= Math.max(ay, by); y++) for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x++) out.push(y * N + x);
+    return out;
+  }
+  function planCost(tool, tiles) { let c = 0, n = 0; for (const i of tiles) if (toolCanPlace(tool, i)) { c += toolCost(tool, i); n++; } return { c, n }; }
+  function applyDrag(tool, tiles) {
+    const { c, n } = planCost(tool, tiles);
+    if (!n) return false;
+    if (c > S.funds) { toast('資金が足りません'); boop(); return false; }
+    S.funds -= c;
+    for (const i of tiles) {
+      if (!toolCanPlace(tool, i)) continue;
+      if (tool.id === 'doze') { clearTile(i); continue; }
+      if (tool.id === 'road') { M.type[i] = ROAD; M.lv[i] = 0; }
+      else if (tool.id === 'line') M.type[i] = LINE;
+      else { M.type[i] = tool.zone; M.lv[i] = 0; }
+    }
+    afterEdit(); click(); return true;
+  }
+  function placeBld(k, x, y) {
+    const b = BK[k];
+    if (b.unlock > S.stage) { toast(`${STAGES[b.unlock].n}に昇格すると建てられます`); return false; }
+    if (!bldCanPlace(k, x, y)) { toast('ここには建てられません'); boop(); return false; }
+    const f = footprint(k, x, y), c = b.cost + f.filter(i => M.type[i] === TREE).length * 3;
+    if (c > S.funds) { toast('資金が足りません'); boop(); return false; }
+    S.funds -= c; const r = f[0];
+    for (const i of f) { M.type[i] = BLD; M.bk[i] = k; M.root[i] = r; M.lv[i] = 0; M.fire[i] = 0; }
+    afterEdit(); click(); toast(`${b.name}を建設`); return true;
+  }
+  function afterEdit() { calcPower(); calcRoad(); totals(); dirtyCars = true; dirty = true; refreshHud(); }
+
+  function calcWat() { for (let i = 0; i < NN; i++) { const x = i % N, y = (i / N) | 0; let w = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < N && yy < N && M.base[yy * N + xx] === WATER) w = 1; } M.wat[i] = w; } }
+  function budget(tax = S.tax) {
+    const inc = Math.round((S.pop * 1.0 + (S.cj + S.ij) * 0.9) * tax / 100 * 3);
+    let svc = 0; for (const r of buildings()) svc += BK[M.bk[r]].up;
+    const rd = Math.round(S.roads * 0.35 + S.lines * 0.1);
+    return { inc, svc, rd, net: inc - svc - rd };
+  }
+
+  // ---------- art ----------
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let W = 0, H = 0, dpr = 1;
+  const OX = N * HW / 2, OY = 110, LW = N * HW, LH = N * HH + OY + 16;
+  const SC = (window.devicePixelRatio || 1) >= 2 ? 3 : 2;
+  const off = document.createElement('canvas'); off.width = LW * SC; off.height = LH * SC; const oc = off.getContext('2d');
+  let dirty = true, dirtyCars = true, overlay = 0, cars = [];
+  const cam = { x: 0, y: 360, z: 1 }, ZMIN = 0.3, ZMAX = 4;
+  const tc = i => [((i % N) - ((i / N) | 0)) * HW / 2, ((i % N) + ((i / N) | 0)) * HH / 2 + HH / 2];
+  const C = { grass: [143, 204, 104], grass2: [132, 196, 96], water: [86, 170, 222], road: [112, 118, 126], pave: [208, 210, 204], rubble: [150, 138, 124], zone: [[184, 228, 156], [172, 204, 238], [238, 216, 150]], zl: ['#3f9a37', '#2f6fb8', '#b88a10'] };
+  const ROOF = [[214, 86, 70], [70, 120, 200], [150, 100, 70], [80, 160, 110], [230, 150, 60]], WALL = [[245, 236, 215], [236, 226, 200], [250, 245, 235]];
+  const rgb = (c, f = 1, a = 1) => `rgba(${c[0] * f | 0},${c[1] * f | 0},${c[2] * f | 0},${a})`;
+  function dia(c, px, py, f = 1) { c.beginPath(); c.moveTo(px, py - 8 * f); c.lineTo(px + 16 * f, py); c.lineTo(px, py + 8 * f); c.lineTo(px - 16 * f, py); c.closePath(); }
+  function box(c, px, py, f, h, col, top) {
+    const w = 16 * f, d = 8 * f;
+    c.fillStyle = rgb(col, 0.8); c.beginPath(); c.moveTo(px - w, py); c.lineTo(px, py + d); c.lineTo(px, py + d - h); c.lineTo(px - w, py - h); c.fill();
+    c.fillStyle = rgb(col, 0.62); c.beginPath(); c.moveTo(px, py + d); c.lineTo(px + w, py); c.lineTo(px + w, py - h); c.lineTo(px, py + d - h); c.fill();
+    c.fillStyle = rgb(top || col, 1); dia(c, px, py - h, f); c.fill();
+  }
+  function windows(c, px, py, f, h, y0, step, a = 0.45) {
+    const w = 16 * f, d = 8 * f; c.strokeStyle = `rgba(255,255,255,${a})`; c.lineWidth = 1; c.beginPath();
+    for (let yy = y0; yy < h - 2; yy += step) {
+      c.moveTo(px - w * 0.86, py + d * 0.14 - yy); c.lineTo(px - w * 0.14, py + d * 0.86 - yy);
+      c.moveTo(px + w * 0.14, py + d * 0.86 - yy); c.lineTo(px + w * 0.86, py + d * 0.14 - yy);
+    }
+    c.stroke();
+  }
+  function roof(c, px, py, f, h, rh, col) {
+    const w = 16 * f, d = 8 * f, t = py - h;
+    c.fillStyle = rgb(col, 0.9); c.beginPath(); c.moveTo(px - w, t); c.lineTo(px, t + d); c.lineTo(px, t - rh); c.fill();
+    c.fillStyle = rgb(col, 0.7); c.beginPath(); c.moveTo(px, t + d); c.lineTo(px + w, t); c.lineTo(px, t - rh); c.fill();
+  }
+  function tree(c, px, py, v) {
+    const n = 1 + (v % 3), pts = [];
+    for (let k = 0; k < n; k++) pts.push([((v >> (k * 2)) & 7) - 3.5 + (k - 1) * 4, ((v >> (k * 2 + 3)) & 3) - 1.5, 3.4 + ((v >> k) & 3) * 0.5]);
+    pts.sort((a, b) => a[1] - b[1]);
+    for (const [ox, oy, s] of pts) {
+      c.fillStyle = '#7a5a3c'; c.fillRect(px + ox - 0.6, py + oy - 3, 1.2, 3);
+      c.fillStyle = (v & 16) ? '#4f9a46' : '#5aa84e'; c.beginPath(); c.arc(px + ox, py + oy - 3 - s, s, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.18)'; c.beginPath(); c.arc(px + ox - s * 0.35, py + oy - 3 - s * 1.35, s * 0.4, 0, 7); c.fill();
+    }
+  }
+  function bolt(c, px, py) {
+    c.fillStyle = '#ffd23a'; c.strokeStyle = '#d6402f'; c.lineWidth = 1; c.beginPath(); c.arc(px, py, 4.2, 0, 7); c.fill(); c.stroke();
+    c.fillStyle = '#d6402f'; c.beginPath(); c.moveTo(px + 0.8, py - 3); c.lineTo(px - 1.8, py + 0.5); c.lineTo(px, py + 0.5); c.lineTo(px - 0.8, py + 3); c.lineTo(px + 1.8, py - 0.5); c.lineTo(px, py - 0.5); c.fill();
+  }
+  function zoneArt(c, t, lv, v, px, py) {
+    if (!lv) return 0;
+    if (t === ZR) {
+      if (lv === 1) { box(c, px, py + 1, 0.55, 7, WALL[v % 3]); roof(c, px, py + 1, 0.55, 7, 6.5, ROOF[(v >> 2) % 5]); return 14; }
+      if (lv === 2) { box(c, px, py, 0.8, 18, [[232, 214, 190], [214, 226, 236], [240, 224, 210]][v % 3], [190, 180, 168]); windows(c, px, py, 0.8, 18, 4, 4.5); return 19; }
+      box(c, px, py, 0.66, 48, [[226, 232, 240], [240, 228, 214], [214, 226, 220]][v % 3], [176, 182, 192]); windows(c, px, py, 0.66, 48, 4, 4); return 49;
+    }
+    if (t === ZC) {
+      if (lv === 1) { const a = ROOF[(v >> 1) % 5]; box(c, px, py, 0.72, 9, [244, 242, 236], a); c.fillStyle = rgb(a, 0.9); c.beginPath(); c.moveTo(px - 11.5, py - 5); c.lineTo(px, py + 0.8); c.lineTo(px, py - 1.6); c.lineTo(px - 11.5, py - 7.4); c.fill(); return 10; }
+      if (lv === 2) { box(c, px, py, 0.75, 26, [150, 196, 232], [118, 148, 178]); windows(c, px, py, 0.75, 26, 4, 3.5, 0.55); return 27; }
+      box(c, px, py, 0.62, 64, [[92, 140, 200], [70, 120, 170], [110, 130, 160]][v % 3], [64, 92, 130]); windows(c, px, py, 0.62, 64, 4, 3.5, 0.5);
+      c.strokeStyle = '#555'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(px, py - 64); c.lineTo(px, py - 74); c.stroke(); return 72;
+    }
+    if (lv === 1) { box(c, px, py, 0.75, 7, [214, 196, 160], [176, 158, 120]); return 8; }
+    if (lv === 2) { box(c, px, py, 0.85, 12, [200, 190, 176], [150, 140, 130]); box(c, px + 5, py - 13, 0.16, 14, [170, 90, 70]); return 28; }
+    box(c, px, py + 1, 0.92, 16, [190, 182, 172], [128, 122, 116]); box(c, px + 4, py - 17, 0.16, 18, [180, 80, 60]); box(c, px - 6, py - 14, 0.16, 16, [180, 80, 60]);
+    c.fillStyle = 'rgba(120,120,120,0.35)'; c.beginPath(); c.arc(px + 6, py - 40, 3.5, 0, 7); c.arc(px + 9, py - 45, 2.6, 0, 7); c.fill(); return 40;
+  }
+  const AX = [16, 8], AY = [-16, 8];
+  const vp = (px, py, a, b) => [px + AX[0] * a + AY[0] * b, py + AX[1] * a + AY[1] * b];
+  function quad(c, px, py, a0, a1, b0, b1) { const p = [vp(px, py, a0, b0), vp(px, py, a1, b0), vp(px, py, a1, b1), vp(px, py, a0, b1)]; c.beginPath(); c.moveTo(...p[0]); for (const q of p.slice(1)) c.lineTo(...q); c.closePath(); }
+  const ART_H = { coal: 44, solar: 6, nuke: 40, police: 18, fire: 16, park: 10, school: 20, hosp: 26, stadium: 12, airport: 28, tower: 104 };
+  function bldArt(c, id, px, py, v) {
+    switch (id) {
+      case 'coal':
+        box(c, px - 4, py + 4, 1.3, 16, [196, 112, 92], [150, 92, 80]);
+        box(c, px + 10, py - 4, 0.24, 34, [126, 116, 110]); box(c, px + 18, py, 0.24, 30, [126, 116, 110]);
+        c.fillStyle = 'rgba(110,110,110,0.4)'; c.beginPath(); c.arc(px + 11, py - 44, 4.5, 0, 7); c.arc(px + 15, py - 50, 3.6, 0, 7); c.arc(px + 19, py - 38, 3.6, 0, 7); c.fill();
+        return 44;
+      case 'solar':
+        for (const [ox, oy] of [[0, -8], [-16, 0], [16, 0], [0, 8]]) { box(c, px + ox, py + oy, 0.78, 2, [40, 70, 130], [52, 92, 170]); c.strokeStyle = 'rgba(200,225,255,0.6)'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(px + ox - 6, py + oy - 5); c.lineTo(px + ox + 6, py + oy + 1); c.stroke(); }
+        return 6;
+      case 'nuke': {
+        box(c, px - 12, py + 4, 0.75, 12, [222, 226, 232], [190, 196, 204]);
+        const x = px + 8, y = py + 2;
+        c.fillStyle = '#c9ced4'; c.beginPath(); c.moveTo(x - 13, y); c.quadraticCurveTo(x - 6, y - 18, x - 9, y - 34); c.lineTo(x + 9, y - 34); c.quadraticCurveTo(x + 6, y - 18, x + 13, y); c.ellipse(x, y, 13, 5, 0, 0, Math.PI); c.fill();
+        c.fillStyle = '#e4e8ec'; c.beginPath(); c.moveTo(x - 13, y); c.quadraticCurveTo(x - 6, y - 18, x - 9, y - 34); c.lineTo(x - 2, y - 34); c.quadraticCurveTo(x - 1, y - 18, x - 4, y + 4); c.fill();
+        c.fillStyle = '#7d858e'; c.beginPath(); c.ellipse(x, y - 34, 9, 3.4, 0, 0, 7); c.fill();
+        c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.arc(x - 2, y - 41, 4, 0, 7); c.arc(x + 3, y - 45, 3.2, 0, 7); c.fill();
+        return 40;
+      }
+      case 'police': box(c, px, py, 0.8, 13, [80, 120, 210], [232, 236, 246]); c.fillStyle = '#fff'; c.beginPath(); c.moveTo(px - 12.8, py - 6); c.lineTo(px, py + 0.4); c.lineTo(px, py - 1.6); c.lineTo(px - 12.8, py - 8); c.fill(); c.fillStyle = '#e33'; c.fillRect(px - 1.5, py - 18, 3, 3); return 18;
+      case 'fire': box(c, px, py, 0.8, 13, [220, 80, 64], [240, 236, 230]); c.fillStyle = '#f6f0e6'; c.beginPath(); c.moveTo(px + 3, py + 4.9); c.lineTo(px + 10, py + 1.4); c.lineTo(px + 10, py - 6); c.lineTo(px + 3, py - 2.5); c.fill(); return 16;
+      case 'park':
+        c.fillStyle = '#7fd0e8'; c.beginPath(); c.ellipse(px + 4, py + 2, 5, 2.5, 0, 0, 7); c.fill();
+        tree(c, px - 7, py - 1, 0x29); tree(c, px + 1, py - 4, 0x10);
+        c.fillStyle = '#9a6a40'; c.fillRect(px - 2, py + 3, 5, 1.2); return 10;
+      case 'school': box(c, px, py + 1, 0.85, 11, [246, 230, 196]); roof(c, px, py + 1, 0.85, 11, 7.5, [220, 120, 60]); box(c, px + 7, py - 6, 0.16, 12, [246, 230, 196], [220, 120, 60]); c.fillStyle = '#fff'; c.beginPath(); c.arc(px + 6.5, py - 13, 1.4, 0, 7); c.fill(); return 20;
+      case 'hosp': box(c, px, py, 0.82, 22, [246, 248, 250], [222, 228, 234]); windows(c, px, py, 0.82, 22, 4, 4.5, 0.0); c.fillStyle = '#e33b3b'; c.fillRect(px - 1.4, py - 26, 2.8, 8); c.fillRect(px - 4, py - 23.4, 8, 2.8); return 26;
+      case 'stadium':
+        c.fillStyle = '#8f949c'; c.beginPath(); c.ellipse(px, py, 27, 13, 0, 0, 7); c.fill();
+        c.fillStyle = '#c3c7cf'; c.beginPath(); c.ellipse(px, py - 7, 27, 13, 0, 0, 7); c.fill();
+        c.fillStyle = '#5bb85a'; c.beginPath(); c.ellipse(px, py - 7, 18, 8.4, 0, 0, 7); c.fill();
+        c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(px - 8, py - 11); c.lineTo(px + 8, py - 3); c.stroke(); c.beginPath(); c.ellipse(px, py - 7, 3.5, 1.7, 0, 0, 7); c.stroke();
+        return 12;
+      case 'airport':
+        c.fillStyle = '#5b6068'; quad(c, px, py, -0.95, 0.95, -0.3, 0.12); c.fill();
+        c.strokeStyle = '#fff'; c.lineWidth = 0.8; c.setLineDash([3, 2.5]); c.beginPath(); c.moveTo(...vp(px, py, -0.85, -0.09)); c.lineTo(...vp(px, py, 0.85, -0.09)); c.stroke(); c.setLineDash([]);
+        box(c, ...vp(px, py, -0.45, 0.62), 0.55, 9, [230, 234, 240], [150, 170, 190]);
+        box(c, ...vp(px, py, 0.55, 0.58), 0.18, 22, [236, 238, 242], [80, 140, 190]);
+        c.fillStyle = '#fff'; { const [x, y] = vp(px, py, 0.25, -0.1); c.beginPath(); c.moveTo(x - 7, y - 3.5); c.lineTo(x + 7, y + 3.5); c.lineTo(x + 5.5, y + 4); c.lineTo(x - 8, y - 2.6); c.fill(); c.beginPath(); c.moveTo(x - 2, y + 2); c.lineTo(x + 3, y - 3); c.lineTo(x + 4, y - 2); c.lineTo(x, y + 3); c.fill(); }
+        return 28;
+      case 'tower':
+        box(c, px, py, 0.62, 30, [230, 196, 110], [244, 214, 140]); box(c, px, py - 30, 0.44, 52, [238, 206, 120], [250, 228, 160]); windows(c, px, py - 30, 0.44, 52, 4, 4, 0.5);
+        c.strokeStyle = '#a07a2a'; c.lineWidth = 1; c.beginPath(); c.moveTo(px, py - 82); c.lineTo(px, py - 100); c.stroke(); c.fillStyle = '#e33'; c.beginPath(); c.arc(px, py - 101, 1.5, 0, 7); c.fill();
+        return 104;
+    }
+    return 0;
+  }
+  const DIRS = [[1, 0, 8, 4], [-1, 0, -8, -4], [0, 1, -8, 4], [0, -1, 8, -4]];
+  function roadMarks(c, i, px, py) {
+    const x = i % N, y = (i / N) | 0;
+    if (M.base[i] === WATER) { dia(c, px, py, 0.86); c.fillStyle = rgb(C.road); c.fill(); c.strokeStyle = '#8a6a48'; c.lineWidth = 0.8; c.stroke(); }
+    c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = 0.7; c.setLineDash([2, 1.6]); c.beginPath(); let n = 0;
+    for (const [dx, dy, ex, ey] of DIRS) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= N || yy >= N || M.type[yy * N + xx] !== ROAD) continue; c.moveTo(px, py); c.lineTo(px + ex, py + ey); n++; }
+    c.stroke(); c.setLineDash([]);
+    if (!n) { c.fillStyle = 'rgba(255,255,255,0.7)'; c.fillRect(px - 1, py - 1, 2, 2); }
+  }
+  function ground(c, i, px, py) {
+    const t = M.type[i], v = M.vr[i], k = 0.97 + (v & 7) * 0.008;
+    let col;
+    if (t === WATER || (t === ROAD && M.base[i] === WATER)) col = C.water;
+    else if (t === ROAD) col = C.road;
+    else if (isZone(t)) col = M.lv[i] ? C.pave : C.zone[t - ZR];
+    else if (t === BLD) { const id = BK[M.bk[i]].id; col = id === 'park' || id === 'stadium' ? C.grass : id === 'airport' ? [168, 174, 178] : C.pave; }
+    else if (t === RUBBLE) col = C.rubble;
+    else col = (v & 1) ? C.grass : C.grass2;
+    dia(c, px, py, 1.03); c.fillStyle = rgb(col, t === ROAD || t === BLD ? 1 : k); c.fill();
+    if (t === WATER) { if (v < 48) { c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(px - 6 + (v & 7), py + (v & 3) - 1); c.lineTo(px + (v & 7), py + (v & 3) - 1); c.stroke(); } }
+    else if (t === ROAD) roadMarks(c, i, px, py);
+    else if (isZone(t) && !M.lv[i]) { dia(c, px, py, 0.76); c.strokeStyle = C.zl[t - ZR]; c.globalAlpha = 0.55; c.lineWidth = 0.8; c.setLineDash([2, 2]); c.stroke(); c.setLineDash([]); c.globalAlpha = 1; }
+    else if (t === RUBBLE) { c.fillStyle = 'rgba(70,60,50,0.55)'; for (let q = 0; q < 4; q++) c.fillRect(px - 8 + ((v >> q) & 7) * 2, py - 3 + ((v >> (q + 2)) & 3) * 2, 2.5, 1.5); }
+    else if (t === GRASS && (v & 63) === 5) { c.fillStyle = '#fff6a0'; c.fillRect(px - 3, py, 1.4, 1.4); c.fillStyle = '#ffb3c8'; c.fillRect(px + 2, py + 2, 1.4, 1.4); }
+  }
+  function linePole(c, i, px, py) {
+    const x = i % N, y = (i / N) | 0;
+    c.strokeStyle = 'rgba(40,40,40,0.55)'; c.lineWidth = 0.5; c.beginPath();
+    if (x < N - 1 && M.type[i + 1] === LINE) { c.moveTo(px, py - 12); c.quadraticCurveTo(px + 8, py - 6, px + 16, py - 4); }
+    if (y < N - 1 && M.type[i + N] === LINE) { c.moveTo(px, py - 12); c.quadraticCurveTo(px - 8, py - 6, px - 16, py - 4); }
+    c.stroke();
+    c.strokeStyle = '#6b5a48'; c.lineWidth = 1.3; c.beginPath(); c.moveTo(px, py); c.lineTo(px, py - 13); c.moveTo(px - 3.5, py - 11); c.lineTo(px + 3.5, py - 11); c.stroke();
+  }
+  function obj(c, i) {
+    const t = M.type[i]; if (t === GRASS || t === WATER || t === ROAD || t === RUBBLE) return;
+    const [px, py] = tc(i); let h = -1;
+    if (t === TREE) tree(c, px, py, M.vr[i]);
+    else if (isZone(t)) h = zoneArt(c, t, M.lv[i], M.vr[i], px, py);
+    else if (t === LINE) linePole(c, i, px, py);
+    else if (t === BLD) {
+      const r = M.root[i], b = BK[M.bk[i]], s = b.size;
+      if (i !== r + (s - 1) * (N + 1)) return;
+      const [rx, ry] = tc(r), cy = ry + (s - 1) * 8, bh = bldArt(c, b.id, rx, cy, M.vr[r]);
+      if (!M.pw[i] && b.id !== 'park' && !b.power && !overlay) bolt(c, rx, cy - bh - 7);
+      return;
+    }
+    if (h >= 0 && !M.pw[i] && !overlay) bolt(c, px, py - h - 6);
+  }
+  function ovColor(i) {
+    const t = M.type[i];
+    if (overlay === 4) return M.pw[i] ? 'rgba(255,214,0,0.5)' : (isZone(t) || t === BLD) ? 'rgba(230,50,40,0.55)' : null;
+    if (t === WATER) return null;
+    if (overlay === 1) return `hsla(${M.lval[i] * 130 | 0},80%,48%,0.55)`;
+    if (overlay === 2) return M.poll[i] > 0.03 ? `rgba(110,60,20,${(M.poll[i] * 0.8).toFixed(2)})` : null;
+    return M.crime[i] > 0.03 ? `rgba(220,30,30,${(M.crime[i] * 0.8).toFixed(2)})` : null;
+  }
+  function renderWorld() {
+    const c = oc; c.setTransform(SC, 0, 0, SC, OX * SC, OY * SC); c.clearRect(-OX, -OY, LW, LH);
+    c.fillStyle = '#9b7a55'; c.beginPath(); c.moveTo(-OX, N * 8); c.lineTo(0, N * 16); c.lineTo(0, N * 16 + 10); c.lineTo(-OX, N * 8 + 10); c.fill();
+    c.fillStyle = '#7f6243'; c.beginPath(); c.moveTo(0, N * 16); c.lineTo(OX, N * 8); c.lineTo(OX, N * 8 + 10); c.lineTo(0, N * 16 + 10); c.fill();
+    for (let i = 0; i < NN; i++) { const [px, py] = tc(i); ground(c, i, px, py); }
+    if (overlay) { for (let i = 0; i < NN; i++) { const col = ovColor(i); if (!col) continue; const [px, py] = tc(i); dia(c, px, py, 1.02); c.fillStyle = col; c.fill(); } c.globalAlpha = 0.45; }
+    for (let s = 0; s <= 2 * N - 2; s++) for (let x = Math.max(0, s - N + 1); x <= Math.min(N - 1, s); x++) obj(c, (s - x) * N + x);
+    c.globalAlpha = 1;
+  }
+
+  // ---------- frame ----------
+  const CARC = ['#e8473c', '#3a7be0', '#f2c230', '#ffffff', '#2fb36a', '#333a44'];
+  function respawnCars() {
+    dirtyCars = false;
+    const roads = []; for (let i = 0; i < NN; i++) if (M.type[i] === ROAD) roads.push(i);
+    const want = Math.min(90, Math.floor(roads.length / 4), Math.floor(S.pop / 50 + (S.cj + S.ij) / 90));
+    cars = cars.filter(k => M.type[k.i] === ROAD && M.type[k.j] === ROAD).slice(0, Math.max(0, want));
+    while (cars.length < want) { const i = roads[(Math.random() * roads.length) | 0]; cars.push({ i, j: i, t: 1, col: CARC[(Math.random() * CARC.length) | 0], v: 0.0011 + Math.random() * 0.0009 }); }
+  }
+  function updateCars(dt) {
+    if (dirtyCars) respawnCars();
+    const m = S.speed ? 0.6 + S.speed * 0.4 : 0;
+    for (const k of cars) {
+      k.t += dt * k.v * m;
+      if (k.t >= 1) { k.t = 0; const prev = k.i; k.i = k.j; const opts = NB4[k.i].filter(n => M.type[n] === ROAD), fw = opts.filter(n => n !== prev), pool = fw.length ? fw : opts; k.j = pool.length ? pool[(Math.random() * pool.length) | 0] : k.i; }
+    }
+  }
+  let gest = null, hover = -1, sel = -1, curTool = 0;
+  function draw(now) {
+    if (dirty) { renderWorld(); dirty = false; }
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#9fd3e6'; ctx.fillRect(0, 0, cv.width, cv.height);
+    const z = cam.z * dpr; ctx.setTransform(z, 0, 0, z, dpr * W / 2 - cam.x * z, dpr * H / 2 - cam.y * z);
+    ctx.drawImage(off, -OX, -OY, LW, LH);
+    for (const k of cars) {
+      const [ax, ay] = tc(k.i), [bx, by] = tc(k.j), x = ax + (bx - ax) * k.t, y = ay + (by - ay) * k.t;
+      let nx = by - ay, ny = -(bx - ax); const l = Math.hypot(nx, ny) || 1; nx = nx / l * 2.6; ny = ny / l * 1.6;
+      ctx.fillStyle = k.col; ctx.fillRect(x + nx - 1.6, y + ny - 2.2, 3.2, 2.2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x + nx - 1.6, y + ny - 0.6, 3.2, 0.7);
+    }
+    for (let i = 0; i < NN; i++) if (M.fire[i]) {
+      const [px, py] = tc(i), f = Math.sin(now / 80 + i * 1.7) * 0.5 + 0.5;
+      ctx.fillStyle = `rgba(255,${110 + f * 70 | 0},30,0.92)`; ctx.beginPath(); ctx.moveTo(px - 7, py + 2); ctx.quadraticCurveTo(px - 6, py - 10, px - 1 + f * 2, py - 18 - f * 6); ctx.quadraticCurveTo(px + 6, py - 8, px + 7, py + 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,236,120,0.95)'; ctx.beginPath(); ctx.moveTo(px - 3.5, py + 2); ctx.quadraticCurveTo(px, py - 6, px + f, py - 10 - f * 3); ctx.quadraticCurveTo(px + 3, py - 4, px + 3.5, py + 2); ctx.fill();
+      ctx.fillStyle = 'rgba(90,90,90,0.35)'; ctx.beginPath(); ctx.arc(px + 2, py - 26 - (now / 40 + i * 13) % 12, 4.5, 0, 7); ctx.fill();
+    }
+    const t = TOOLS[curTool];
+    if (gest && gest.k === 'drag') previewTiles(gest);
+    else if (hover >= 0 && t.id !== 'look') previewTiles({ t, a: hover, b: hover });
+    if (sel >= 0 && t.id === 'look') { const [px, py] = tc(sel); dia(ctx, px, py); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6 / cam.z + 0.4; ctx.stroke(); }
+  }
+  function previewTiles(g) {
+    const t = g.t;
+    if (t.bk != null) {
+      const x = g.b % N, y = (g.b / N) | 0, f = footprint(t.bk, x, y), ok = bldCanPlace(t.bk, x, y);
+      for (const i of f || [g.b]) { const [px, py] = tc(i); dia(ctx, px, py); ctx.fillStyle = ok ? 'rgba(90,210,120,0.5)' : 'rgba(235,70,60,0.45)'; ctx.fill(); }
+      if (BK[t.bk].rad && ok) { const s = BK[t.bk].size, cx = x + s / 2, cy = y + s / 2, r = BK[t.bk].rad; ctx.save(); ctx.translate((cx - cy) * 16, (cx + cy) * 8); ctx.scale(1, 0.5); ctx.rotate(Math.PI / 4); ctx.beginPath(); ctx.arc(0, 0, r * 16 * Math.SQRT2, 0, 7); ctx.restore(); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]); }
+      return;
+    }
+    for (const i of dragTiles(t, g.a, g.b)) { const [px, py] = tc(i); dia(ctx, px, py); ctx.fillStyle = toolCanPlace(t, i) ? (t.id === 'doze' ? 'rgba(255,150,60,0.5)' : 'rgba(90,210,120,0.5)') : 'rgba(235,70,60,0.3)'; ctx.fill(); }
+  }
+
+  // ---------- input ----------
+  const s2w = (sx, sy) => [(sx - W / 2) / cam.z + cam.x, (sy - H / 2) / cam.z + cam.y];
+  function pick(sx, sy, cl, off = 0) {
+    const [wx, wy] = s2w(sx, sy), u = wx / 16, v = wy / 8;
+    let x = Math.floor((u + v) / 2 - off), y = Math.floor((v - u) / 2 - off);
+    if (cl) { x = clamp(x, 0, N - 1); y = clamp(y, 0, N - 1); }
+    return x < 0 || y < 0 || x >= N || y >= N ? -1 : y * N + x;
+  }
+  function pickTool(sx, sy, cl) { const t = TOOLS[curTool]; return pick(sx, sy, cl, t.bk != null && BK[t.bk].size === 2 ? 0.5 : 0); }
+  function clampCam() { cam.x = clamp(cam.x, -OX, OX); cam.y = clamp(cam.y, -40, N * 16 + 40); }
+  const pts = new Map(), tag = $('tag');
+  cv.addEventListener('pointerdown', e => {
+    if (!S) return; unlockAudio();
+    try { cv.setPointerCapture(e.pointerId); } catch {}
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) { const [a, b] = [...pts.values()], cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, [wx, wy] = s2w(cx, cy); gest = { k: 'pinch', d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: cam.z, wx, wy }; tag.style.display = 'none'; return; }
+    if (pts.size > 2) return;
+    const t = TOOLS[curTool], a = e.button > 0 || t.id === 'look' ? -1 : pickTool(e.clientX, e.clientY);
+    if (a < 0) { gest = { k: 'pan', x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, m: 0, tap: e.button === 0 && t.id === 'look' }; return; }
+    hover = -1; gest = { k: 'drag', t, a, b: a, x: e.clientX, y: e.clientY }; updTag();
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!S) return;
+    if (!pts.has(e.pointerId)) { if (e.pointerType === 'mouse') hover = pickTool(e.clientX, e.clientY); return; }
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!gest) return;
+    if (gest.k === 'pinch' && pts.size >= 2) {
+      const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+      cam.z = clamp(gest.z * d / gest.d, ZMIN, ZMAX); cam.x = gest.wx - (cx - W / 2) / cam.z; cam.y = gest.wy - (cy - H / 2) / cam.z; clampCam();
+    } else if (gest.k === 'pan') {
+      const dx = e.clientX - gest.x, dy = e.clientY - gest.y; gest.m = Math.max(gest.m, Math.hypot(dx, dy));
+      cam.x = gest.cx - dx / cam.z; cam.y = gest.cy - dy / cam.z; clampCam();
+    } else if (gest.k === 'drag') { const b = pickTool(e.clientX, e.clientY, true); if (b >= 0) gest.b = b; gest.x = e.clientX; gest.y = e.clientY; updTag(); }
+  });
+  function endPtr(e) {
+    if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+    if (!gest) return;
+    if (gest.k === 'pinch' || gest.k === 'idle') { gest = pts.size ? { k: 'idle' } : null; return; }
+    if (e.type === 'pointercancel') { gest = null; tag.style.display = 'none'; return; }
+    if (gest.k === 'pan') { if (gest.tap && gest.m < 8) { const i = pick(e.clientX, e.clientY); if (i >= 0) inspect(i); else closeCard(); } }
+    else if (gest.k === 'drag') { const g = gest, t = g.t; if (t.bk != null) placeBld(t.bk, g.b % N, (g.b / N) | 0); else applyDrag(t, dragTiles(t, g.a, g.b)); tag.style.display = 'none'; }
+    gest = null;
+  }
+  cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+  cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hover = -1; });
+  cv.addEventListener('wheel', e => { e.preventDefault(); const [wx, wy] = s2w(e.clientX, e.clientY); cam.z = clamp(cam.z * Math.exp(-e.deltaY * 0.0015), ZMIN, ZMAX); cam.x = wx - (e.clientX - W / 2) / cam.z; cam.y = wy - (e.clientY - H / 2) / cam.z; clampCam(); }, { passive: false });
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  function updTag() {
+    const g = gest, t = g.t; let txt, bad;
+    if (t.bk != null) { const ok = bldCanPlace(t.bk, g.b % N, (g.b / N) | 0); txt = ok ? fmt(BK[t.bk].cost) : '建設できない'; bad = !ok || BK[t.bk].cost > S.funds; }
+    else { const { c, n } = planCost(t, dragTiles(t, g.a, g.b)); txt = n ? `${n}マス  ${fmt(c)}` : '—'; bad = !n || c > S.funds; }
+    tag.textContent = txt; tag.className = bad ? 'bad' : ''; tag.style.left = g.x + 'px'; tag.style.top = (g.y - 24) + 'px'; tag.style.display = 'block';
+  }
+
+  // ---------- ui ----------
+  const card = $('card');
+  const TOOL_DESC = { road: 'なぞって道路を引く。水の上は橋（1マス60）', R: '家やマンションが建つ区画。なぞって四角く指定', C: 'お店やオフィスが建つ区画', I: '工場が建つ区画。汚染に注意', doze: '建物・道路・区画を取り壊す', line: '道路がない場所にも電気を届ける' };
+  const ZN = [['空き地', '一軒家', 'アパート', 'タワーマンション'], ['空き地', '商店', 'オフィスビル', '超高層ビル'], ['空き地', '町工場', '工場', 'コンビナート']];
+  function cardHead(name) { const h = el('div', 't'), x = el('button', null, '×'); x.type = 'button'; x.setAttribute('aria-label', '閉じる'); x.onclick = closeCard; h.append(el('b', null, name), x); return h; }
+  function closeCard() { card.hidden = true; sel = -1; }
+  function toolCard() {
+    const t = TOOLS[curTool]; sel = -1;
+    if (t.id === 'look') { card.hidden = true; return; }
+    const b = t.bk != null ? BK[t.bk] : null;
+    const line = b ? `費用 ${fmt(b.cost)}　維持費 ${b.up}/月${b.power ? `　発電 ${b.power}` : ''}` : t.id === 'doze' ? '費用 1マス2〜' : `費用 1マス${t.cost}`;
+    const d = el('div', null, b ? b.desc : TOOL_DESC[t.id]); d.style.color = 'var(--dim)';
+    card.replaceChildren(cardHead(t.name), el('div', null, line), d); card.hidden = false;
+  }
+  function meter(label, v, col) { const m = el('div', 'mt'), i = el('i'); i.style.setProperty('--w', Math.round(v * 100) + '%'); i.style.setProperty('--c', col); m.append(el('span', null, label), i); return m; }
+  function inspect(i) {
+    sel = i; const t = M.type[i]; let name, sub = '';
+    if (isZone(t)) { const z = t - ZR, l = M.lv[i]; name = ['住宅地', '商業地', '工業地'][z] + '：' + ZN[z][l]; sub = z === 0 ? `人口 ${POP[l]}` : `雇用 ${(z === 1 ? JOBC : JOBI)[l]}`; }
+    else if (t === BLD) { const b = BK[M.bk[i]]; name = b.name; sub = b.power ? `発電 ${b.power}（街全体 ${fmt(S.used)} / ${fmt(S.cap)}）` : `維持費 ${b.up}/月　${M.pw[i] || b.id === 'park' ? '稼働中' : '停電中'}`; }
+    else name = t === ROAD && M.base[i] === WATER ? '橋' : ({ [GRASS]: '草地', [WATER]: '水辺', [TREE]: '森', [ROAD]: '道路', [LINE]: '電線', [RUBBLE]: '焼け跡（解体で整地）' })[t];
+    card.replaceChildren(cardHead(name));
+    if (sub) card.append(el('div', null, sub));
+    if (t !== WATER) { const g = el('div', 'meters'); g.append(meter('地価', M.lval[i], 'var(--good)'), meter('汚染', M.poll[i], '#8a5a2a'), meter('犯罪', M.crime[i], 'var(--bad)'), meter('消防', M.fcv[i], 'var(--accent)')); card.append(g); }
+    if (isZone(t)) { const w = whyNot(i); card.append(w ? el('div', 'why', '⚠ ' + w) : el('div', 'ok', M.lv[i] >= 3 ? '最大まで発展！' : '順調に発展中')); }
+    if (M.fire[i]) card.append(el('div', 'why', '火災発生中！'));
+    card.hidden = false;
+  }
+  const ICON_GROUND = { road: C.road, line: C.grass, doze: C.rubble, look: C.grass };
+  function toolIcon(t) {
+    const cvs = el('canvas'); cvs.width = 88; cvs.height = 68; const c = cvs.getContext('2d');
+    const b = t.bk != null ? BK[t.bk] : null, sz = b ? b.size : 1, ah = b ? ART_H[b.id] : t.zone ? 16 : 14;
+    const s = Math.min(84 / (sz * 32 + 2), 64 / (sz * 16 + ah + 4));
+    c.setTransform(s, 0, 0, s, 44, 66 - 8 * sz * s - 8 * (sz - 1) * s);
+    const gd = (col, x, y) => { dia(c, x, y, 1.02); c.fillStyle = rgb(col); c.fill(); };
+    if (b) {
+      const id = b.id, gc = id === 'park' || id === 'stadium' ? C.grass : id === 'airport' ? [168, 174, 178] : C.pave;
+      if (sz === 2) { for (const [ox, oy] of [[0, -8], [-16, 0], [16, 0], [0, 8]]) gd(gc, ox, oy); } else gd(gc, 0, 0);
+      bldArt(c, id, 0, 0, 7);
+    } else if (t.zone) { gd(C.zone[t.zone - ZR], 0, 0); zoneArt(c, t.zone, t.zone === ZR ? 1 : 2, 6, 0, 0); }
+    else {
+      gd(ICON_GROUND[t.id], 0, 0);
+      if (t.id === 'road') { c.strokeStyle = '#fff'; c.lineWidth = 0.8; c.setLineDash([2, 1.6]); c.beginPath(); c.moveTo(-8, -4); c.lineTo(8, 4); c.stroke(); c.setLineDash([]); }
+      else if (t.id === 'line') { c.strokeStyle = '#6b5a48'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(0, 2); c.lineTo(0, -12); c.moveTo(-4, -10); c.lineTo(4, -10); c.stroke(); c.fillStyle = '#ffd23a'; c.beginPath(); c.moveTo(7, -14); c.lineTo(3, -7); c.lineTo(6, -7); c.lineTo(4, -1); c.lineTo(10, -9); c.lineTo(7, -9); c.fill(); }
+      else if (t.id === 'doze') { c.strokeStyle = '#e0503f'; c.lineWidth = 2.4; c.lineCap = 'round'; c.beginPath(); c.moveTo(-6, -9); c.lineTo(6, 1); c.moveTo(6, -9); c.lineTo(-6, 1); c.stroke(); }
+      else { c.strokeStyle = '#22323a'; c.lineWidth = 2; c.lineCap = 'round'; c.beginPath(); c.arc(-1.5, -6, 5, 0, 7); c.moveTo(2, -2.5); c.lineTo(6.5, 2); c.stroke(); c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.arc(-1.5, -6, 3.8, 0, 7); c.fill(); }
+    }
+    return cvs;
+  }
+  let toolBtns = [];
+  function renderTools() {
+    const box = $('tools'), sx = box.scrollLeft; box.replaceChildren(); toolBtns = [];
+    TOOLS.forEach((t, k) => {
+      const b = el('button', 'tl'), lock = t.bk != null && BK[t.bk].unlock > (S ? S.stage : 0); b.type = 'button';
+      if (lock) b.classList.add('lock'); if (k === curTool) b.classList.add('on');
+      b.append(toolIcon(t), el('span', 'n', t.name), el('span', 'c', lock ? `${STAGES[BK[t.bk].unlock].n}で解放` : t.cost ? fmt(t.cost) : t.id === 'look' ? '移動・情報' : ''));
+      b.onclick = () => selectTool(k); box.append(b); toolBtns.push(b);
+    });
+    box.scrollLeft = sx;
+  }
+  function selectTool(k) {
+    const t = TOOLS[k];
+    if (t.bk != null && BK[t.bk].unlock > S.stage) { toast(`${STAGES[BK[t.bk].unlock].n}に昇格すると解放されます`); boop(); return; }
+    curTool = k; toolBtns.forEach((b, j) => b.classList.toggle('on', j === k)); hover = -1; toolCard(); click();
+  }
+  function setRich(e, parts) { e.replaceChildren(...parts.map((p, k) => el(k % 2 ? 'b' : 'span', null, p))); }
+  function mission() {
+    const has = id => buildings().some(r => BK[M.bk[r]].id === id);
+    let p;
+    if (!BK.some(b => b.power && has(b.id))) p = ['まずは', '火力発電所', 'を建てよう（下のツールを右へ）'];
+    else if (S.roads < 4) p = ['', '道路', 'を引こう。発電所に道路をつなぐと電気も流れる'];
+    else if (!S.zones[0]) p = ['道路から2マス以内に', '住宅地', 'を指定しよう'];
+    else if (!S.zones[1] || !S.zones[2]) p = ['住民には働く場所が必要。', '商業地・工業地', 'も指定しよう'];
+    else if (S.short) p = ['電力が足りない！ ', '発電所', 'を増やそう'];
+    else if (S.unp > 0) p = [`停電中の区画が${S.unp}マス。`, '道路か電線', 'で発電所とつなごう'];
+    else if (S.funds < 0) p = ['赤字です！ ', '税率', 'を上げるか、施設を減らそう'];
+    else if (S.stage < STAGES.length - 1) { const nx = STAGES[S.stage + 1]; p = ['次の目標：人口 ', fmt(nx.p), ` で「${nx.n}」に昇格`]; }
+    else p = ['', 'メガシティ達成！', ' 自由に街を広げよう'];
+    setRich($('mission'), p);
+  }
+  let lastStage = -1;
+  function refreshHud() {
+    if (!S || !S.dem) return;
+    $('pop').textContent = fmt(S.pop);
+    const f = $('funds'); f.textContent = fmt(S.funds); f.classList.toggle('neg', S.funds < 0);
+    const n = $('net'); n.textContent = S.month ? (S.last.net >= 0 ? '+' : '') + fmt(S.last.net) : ''; n.className = S.last.net >= 0 ? 'pos' : 'neg';
+    $('date').textContent = `${Math.floor(S.month / 12) + 1}年 ${S.month % 12 + 1}月`;
+    const st = STAGES[S.stage]; $('stage').textContent = st.n; $('cname').textContent = 'ハコニワ' + st.n;
+    for (const k of ['R', 'C', 'I']) { const d = S.dem[k], e = $('d' + k); if (d >= 0) { e.style.top = ''; e.style.bottom = '50%'; e.style.height = d * 50 + '%'; e.style.background = `var(--${k})`; } else { e.style.bottom = ''; e.style.top = '50%'; e.style.height = -d * 50 + '%'; e.style.background = 'var(--bad)'; } }
+    [...$('speed').children].forEach(b => b.classList.toggle('on', +b.dataset.s === S.speed));
+    if (lastStage !== S.stage) { lastStage = S.stage; renderTools(); }
+    mission();
+  }
+  const OVN = ['通常', '地価', '汚染', '犯罪', '電力'], OVL = ['', '地価：赤＝低い／緑＝高い', '汚染：茶色が濃いほど汚染', '犯罪：赤が濃いほど危険', '電力：黄＝通電／赤＝停電'];
+  $('ovBtn').onclick = () => {
+    overlay = (overlay + 1) % 5; dirty = true; const b = $('ovBtn'); b.replaceChildren('表示', el('br'), OVN[overlay]);
+    const lg = $('legend'); lg.textContent = OVL[overlay]; lg.style.display = overlay ? 'block' : 'none'; lg.style.bottom = ($('bottom').offsetHeight + 8) + 'px'; click();
+  };
+  $('speed').onclick = e => { const b = e.target.closest('button'); if (!b || !S) return; S.speed = +b.dataset.s; refreshHud(); click(); };
+  let toastT = 0;
+  function toast(m, ms = 2400) { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); }
+
+  // ---------- audio ----------
+  let AC = null, sound = true;
+  function unlockAudio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch {} } if (AC && AC.state === 'suspended') AC.resume(); }
+  function tone(f, d, type = 'sine', v = 0.05, delay = 0) {
+    if (!AC || !sound) return; const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.value = f; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0008, t + d); o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + 0.02);
+  }
+  const click = () => tone(880, 0.05, 'triangle', 0.04), boop = () => tone(150, 0.16, 'square', 0.035), chime = () => [523, 659, 784, 1047].forEach((f, k) => tone(f, 0.3, 'triangle', 0.06, k * 0.1));
+
+  // ---------- panels / flow ----------
+  const panels = ['pTitle', 'pMenu', 'pHelp'], show = id => { $(id).hidden = false; }, hide = id => { $(id).hidden = true; };
+  const running = () => S && panels.every(id => $(id).hidden);
+  let hasCity = false, landSel = 0, armNew = false;
+  const landSeeds = LANDS.map(() => (Math.random() * 1e9) | 0);
+  const ARR = ['base', 'type', 'lv', 'bk', 'root', 'fire', 'vr'];
+  function save() { if (!S || !hasCity) return; const o = { v: 1, S: Object.assign({}, S, { dem: null }) }; for (const k of ARR) o[k] = Array.from(M[k]); store(LSK, o); }
+  function recompute() { calcPower(); calcRoad(); calcFields(); totals(); calcDemand(); dirty = dirtyCars = true; refreshHud(); }
+  function freshState(seed, land) { return { seed, land, funds: 20000, tax: 9, month: 0, week: 0, stage: 0, speed: 1, fires: true, last: { inc: 0, svc: 0, rd: 0, net: 0 }, cap: 0, used: 0, air: 0, stad: 0, short: false }; }
+  function loadGame() {
+    const o = load(LSK); if (!o || !o.S || !Array.isArray(o.type) || o.type.length !== NN) return false;
+    M = blankMap(); for (const k of ARR) M[k].set(o[k]); calcWat();
+    S = Object.assign(freshState(o.S.seed, o.S.land), o.S); hasCity = true; cars = []; recompute(); return true;
+  }
+  function centerCam() { cam.x = 0; cam.y = N * 0.58 * 16; cam.z = clamp(Math.min(W, 700) / 430, 0.8, 1.6); }
+  function newCity(seed, land) {
+    S = freshState(seed, land); genMap(seed, land); hasCity = true; cars = []; recompute(); centerCam();
+    panels.forEach(hide); selectTool(TOOLS.findIndex(t => t.id === 'b0')); save();
+    toast('ハコニワ村へようこそ！\nまずは発電所を建てよう', 3200);
+  }
+  function drawLand(cvs, k) {
+    const keep = M; genMap(landSeeds[k], LANDS[k].id); const c = cvs.getContext('2d');
+    c.setTransform(1.8, 0.9, -1.8, 0.9, 72, 8);
+    for (let i = 0; i < NN; i++) { const t = M.type[i]; c.fillStyle = t === WATER ? '#56aade' : t === TREE ? '#4f9a46' : '#8fcc68'; c.fillRect(i % N, (i / N) | 0, 1.05, 1.05); }
+    M = keep;
+  }
+  function openTitle() {
+    $('resumeBtn').hidden = !hasCity; armNew = false; $('newBtn').textContent = 'この土地で新しい街をつくる';
+    const box = $('lands'); box.replaceChildren();
+    LANDS.forEach((l, k) => { const b = el('button', 'land'), cvs = el('canvas'); b.type = 'button'; cvs.width = 144; cvs.height = 96; drawLand(cvs, k); b.append(cvs, el('span', null, l.name)); b.classList.toggle('on', k === landSel); b.onclick = () => { landSel = k; [...box.children].forEach((x, j) => x.classList.toggle('on', j === k)); click(); }; box.append(b); });
+    show('pTitle');
+  }
+  function openMenu() {
+    $('tax').value = S.tax; $('taxV').textContent = S.tax + '%'; fillBudget();
+    const g = $('goals'); g.replaceChildren(...STAGES.slice(1).map((st, k) => { const d = el('div', 'goal' + (S.stage > k ? ' done' : '')); d.append(el('b', null, (S.stage > k ? '✓ ' : '') + st.n), el('span', null, `人口 ${fmt(st.p)}`)); return d; }));
+    $('fireBtn').textContent = '火災：' + (S.fires ? 'ON' : 'OFF'); show('pMenu');
+  }
+  function fillBudget() {
+    const b = budget(), rows = [['税収（見込み）', b.inc], ['公共施設', -b.svc], ['道路・電線', -b.rd], ['月の収支', b.net], ['電力（使用／発電）', `${fmt(S.used)} / ${fmt(S.cap)}`], ['人口／雇用', `${fmt(S.pop)} / ${fmt(S.cj + S.ij)}`]];
+    $('bud').replaceChildren(...rows.flatMap(([k, v], j) => { const a = el('span', j === 3 ? 'sum' : null, k), n = el('b', j === 3 ? 'sum' : null, typeof v === 'number' ? (v > 0 && j === 3 ? '+' : '') + fmt(v) : v); if (typeof v === 'number' && v < 0) n.classList.add('neg'); return [a, n]; }));
+  }
+  $('tax').oninput = e => { S.tax = +e.target.value; $('taxV').textContent = S.tax + '%'; calcDemand(); fillBudget(); refreshHud(); };
+  $('menuBtn').onclick = () => { if (S) { openMenu(); click(); } };
+  $('mClose').onclick = () => { hide('pMenu'); click(); };
+  $('mTitle').onclick = () => { save(); hide('pMenu'); openTitle(); };
+  $('fireBtn').onclick = () => { S.fires = !S.fires; $('fireBtn').textContent = '火災：' + (S.fires ? 'ON' : 'OFF'); click(); };
+  $('helpBtn').onclick = $('mHelp').onclick = () => { show('pHelp'); click(); };
+  $('helpBack').onclick = () => { hide('pHelp'); click(); };
+  $('resumeBtn').onclick = () => { unlockAudio(); hide('pTitle'); click(); };
+  $('newBtn').onclick = () => {
+    unlockAudio();
+    if (hasCity && !armNew) { armNew = true; $('newBtn').textContent = '今の街を上書きして始める（もう一度タップ）'; boop(); return; }
+    newCity(landSeeds[landSel], LANDS[landSel].id); chime();
+  };
+
+  // ---------- loop ----------
+  const SPD = [0, 900, 420, 170];
+  let last = performance.now(), acc = 0;
+  function loop(now) {
+    const dt = Math.min(100, now - last); last = now;
+    if (S) {
+      if (running() && S.speed) { acc += dt; while (acc >= SPD[S.speed]) { acc -= SPD[S.speed]; simWeek(); } } else acc = 0;
+      updateCars(running() ? dt : 0); draw(now);
+    }
+    requestAnimationFrame(loop);
+  }
+  function resize() { W = innerWidth; H = innerHeight; dpr = Math.min(window.devicePixelRatio || 1, 2.5); cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+  addEventListener('pagehide', save);
+
+  window.__hk = {
+    get S() { return S; }, get M() { return M; }, cam, TOOLS, BK, idx: (x, y) => y * N + x,
+    months(n) { for (let k = 0; k < n; k++) simMonth(); },
+    drag(id, a, b) { const t = TOOLS.find(x => x.id === id); return applyDrag(t, dragTiles(t, a, b)); },
+    bld(id, x, y) { return placeBld(bkIdx(id), x, y); }, newCity, inspect, setOverlay(k) { overlay = k; dirty = true; },
+    why: whyNot, dem: () => S.dem, field: (k, i) => M[k][i], render() { const t = performance.now(); renderWorld(); return performance.now() - t; }
+  };
+
+  resize();
+  if (!loadGame()) { S = freshState(1, 'river'); genMap((Math.random() * 1e9) | 0, 'river'); recompute(); }
+  centerCam(); renderTools(); openTitle(); requestAnimationFrame(loop);
+})();
+</script>
